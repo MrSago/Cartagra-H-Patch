@@ -491,3 +491,60 @@ def replace_calls(rus_data, script, block):
         n += 1
     _renumber_markers(out)
     return ls.assemble(out), n
+
+
+# ---------------------------------------------------------------- read flags
+# The "_arflag" metadata entry sizes each script's bitmaps in the system data
+# (read lines, chosen options, passed markers). TECHNICAL_NOTES.md, "Read Flags".
+
+ARFLAG_RECORD = struct.Struct("<8H")  # 16, 0x011F, 0, script number (entry index + 1), lines, select bits, markers, 0
+ARFLAG_HEAD = (16, 0x011F, 0)
+MARKER_OPS_RUS = (OP_MARKER, OP_MOVIE_RUS)
+
+
+def arflag_counts(rus_data):
+    """
+    (lines, select bits, markers) of a RUS script, as _arflag stores them:
+    highest MESSAGE/op 43 line index + 1; end of the last select's bit range
+    (head u16 at [6] = 0x4000 | first bit; 2 * options + 1 bits); highest marker ID + 1.
+    """
+    lines = sel_bits = markers = 0
+    for ins in ls.parse(rus_data):
+        if ins.op in (OP_MESSAGE, 43):
+            lines = max(lines, struct.unpack_from("<H", ins.body, 0)[0] + 1)
+        elif ins.op == OP_SELECT:
+            head, jp, _, _ = parse_select(ins.body, True)
+            first = struct.unpack_from("<H", head, 6)[0] & 0x3FFF
+            sel_bits = max(sel_bits, first + 2 * (jp.count("$d") + 1) + 1)
+        elif ins.op in MARKER_OPS_RUS and len(ins.body) >= 2 and ins.body[1] & 0x80:
+            markers = max(markers, (struct.unpack_from("<H", ins.body, 0)[0] & 0x7FFF) + 1)
+    return lines, sel_bits, markers
+
+
+def rebuild_arflag(arflag, old_names, entries):
+    """
+    New _arflag data for `entries` (all entries of SCRIPT.PAK, in order), from the
+    data of the original archive whose entry names were `old_names`. Records of
+    scripts are recomputed, records of metadata entries kept, scripts without a
+    record get one, and every record gets its entry's new number. Records are sorted
+    by number, as in the originals (scripts first, `_varset...` last).
+    Returns (data, changed script names).
+    """
+    index = {e.name: k + 1 for k, e in enumerate(entries)}
+    by_name = {e.name: e for e in entries}
+    records, changed = {}, []
+    for off in range(0, len(arflag), ARFLAG_RECORD.size):
+        rec = list(ARFLAG_RECORD.unpack_from(arflag, off))
+        name = old_names[rec[3] - 1]
+        if not name.startswith("_"):
+            counts = list(arflag_counts(by_name[name].data))
+            if counts != rec[4:7]:
+                rec[4:7] = counts
+                changed.append(name)
+        rec[3] = index[name]
+        records[name] = rec
+    for e in entries:
+        if not e.name.startswith("_") and e.name not in records:
+            records[e.name] = list(ARFLAG_HEAD) + [index[e.name]] + list(arflag_counts(e.data)) + [0]
+            changed.append(e.name)
+    return b"".join(ARFLAG_RECORD.pack(*r) for r in sorted(records.values(), key=lambda r: r[3])), changed

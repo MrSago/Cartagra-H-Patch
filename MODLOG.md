@@ -85,3 +85,21 @@ Single-player VN, no anti-cheat.
 - Build: new start-sequence step: `0000-op1` calls the prologue after its setup; `0308-02-00` plays Rengoku instead of calling the prologue; `0209-08-00` no longer plays it. Marker IDs of ops 25/119 renumbered (gives the JP numbering). No executable change. SCRIPT.PAK 6,380,340 bytes.
 - Tests: 3 unit tests for the new script edits; the integration test compares the reference with `start_sequence=False`.
 - In game: checked by the user ("everything works"). The agent did not touch the installed game.
+
+## 2026-10-26 session 7: read text and choices (branch `fix-read-text-and-choices`)
+
+- `restore-prologue-opening` merged into `master` (fast-forward); new branch `fix-read-text-and-choices`.
+- User report (Russian Steam build only): "Skip read text" skips unread text; chosen options are not remembered; the `userdata` folder stays empty; saves are elsewhere.
+- Saves: the game uses the Steam API; the bundled emulator writes to `%APPDATA%/GSE Saves/4290390/remote/` (`data000.dat` = system data, `dataNNN.*` = slots, `config.dat`). `userdata/22202/` is the emulator's (account ID 22202) and unused. Not a bug.
+- System data: per script three bitmaps (read lines, chosen options, passed markers), sized by `_arflag` in `SCRIPT.PAK`. Decoded the record format and the size rule (reproduces all RUS and JP records). The user's `data000.dat` had Steam's short sizes for the 20 ported scenes and no records for the 4 added ones: the patch never updated `_arflag`. That is the cause.
+- Fix: the build recomputes `_arflag` (26 scripts changed, 4 records added). The restored scenes now have the JP values.
+- Backup of the user's saves before testing: `backup/saves/GSE_4290390_2026-10-26/`.
+- Tests: 2 new unit tests; integration test option renamed to `reference=True`.
+- The game migrated the user's old `data000.dat` to the new sizes on the next save, keeping all bits. But the 4 added scenes still had no records: the game only tracks scripts before the metadata entries. New scripts are now inserted before the metadata (as in both originals); `_arflag` records sorted by number, `_varset` last.
+- In game (test build `--test-start 0217-01-05h`, window 1280x720, saves backed up to `backup/saves/GSE_4290390_2026-10-26_before_ingame_test/`): SKIP greyed on unread lines, stops at the first unread line after a restart of the scene; the chosen option is drawn with a darker box; after a quick save `data000.dat` has records for all 4 added scenes (69 read bits + choice bit in `0217-01-05h`).
+- System data is written only on save (also quick save), not on quit.
+- Driving notes: the plugin's gfxcapture filter is missing; screenshots via a DPI-aware CopyFromScreen of the client area (PowerShell). At 1280x720 logical (1600x900 physical at 125%), logical click = 2 x pixel of a 0.4-scale shot. Title START (216,588); right click = SYSTEM MENU (TITLE 924,300; Q.SAVE 356,470); confirm Yes (542,382); in-game SKIP (1088,702), EXIT (1258,703, asks to quit). Launch with run_in_background: stopping the launching command kills the game. Long `hold` calls can hang if the PC locks.
+- Afterwards: the user's save folder restored from that backup (identical), normal `dist/ru` SCRIPT.PAK installed.
+- User: chosen options are still not colored (JP screenshot: chosen option in purple). Native Steam scene `0207-06-00` (slot 16, both options chosen before, bits `03`): text white too, so not a patch issue. Cause: Options > Text1 > "Color of Previously Read Text" was Off. "On" colors all read text (both options lavender); "Only Choices" colors only chosen options. Verified in restored `0217-01-05h`: chose option 2, came back: option 2 lavender, option 1 white. Chosen-option bits: bit first+k = option k chosen.
+- My earlier "darker box = chosen marker" reading was wrong; corrected in TECHNICAL_NOTES.
+- Afterwards: saves restored from `backup/saves/GSE_4290390_2026-10-26_before_ingame_test/` (so the option is Off again), normal build installed.

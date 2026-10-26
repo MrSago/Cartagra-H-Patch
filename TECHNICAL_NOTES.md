@@ -26,6 +26,7 @@ Module names refer to `cartagra_patch/<name>.py`. Before the 2026-10-26 refactor
 - [Porting Scripts from JP to RUS](#porting-scripts-from-jp-to-rus)
 - [What Steam Censored](#what-steam-censored)
 - [Start Sequence](#start-sequence)
+- [Read Flags and Saves](#read-flags-and-saves)
 - [EVENTCG.PAK Comparison](#eventcgpak-comparison)
 - [Censored Images](#censored-images)
 - [Voice, Music and Sound Effects](#voice-music-and-sound-effects)
@@ -51,6 +52,7 @@ Module names refer to `cartagra_patch/<name>.py`. Before the 2026-10-26 refactor
 6. **[V]** All 24 censored scenes are now ported and all 150 restored CGs are referenced. 3,970 of 4,422 restored lines have no Russian translation in the release; since 2026-10-26 the Russian tables translate all of them (see [Text for the Russian slot](#text-for-the-russian-slot)).
 7. **[V]** Steam also **edited 51 pictures** that the Russian scripts still show (35 EVENTCG, 16 OTHCG): clothes painted on, blood, wounds and corpses removed or blacked out, frames recomposed. The patch puts the JP originals back in the same slots.
 8. **[V]** Steam **moved the prologue and the opening movie** from New Game to just before part 2, and the Rengoku movie from there to the end of `0209-08-00`. The patch restores the JP order with three script edits (see [Start Sequence](#start-sequence)).
+9. **[V]** The bitmaps for read lines and chosen options in the system data are sized by the `_arflag` table of `SCRIPT.PAK`, which the patch must update for every changed script (see [Read Flags and Saves](#read-flags-and-saves)).
 
 ## Game Installations in This Project
 
@@ -208,13 +210,13 @@ Strings inside bodies are `i16 -n`, then n bytes (Shift-JIS/ASCII), then NUL. Ex
 - Tail: u8 flags (`0x0B`, `0x03`, `0x05`), u16 per-line value (JP: always 10; RUS: varies in steps of 10; **[H]** auto-mode timing), u16 0.
 - Text markup: `@Name@` speaker prefix, `$d` separator, `$[base$/ruby$]` ruby.
 
-**[V]** SELECT (op 40): 8-byte head (u16 `0x6D61`, u16 **flag slot**, u16 index in script, u16 `0x40xx`), JP text (`$d` between options), then in RUS **two UTF-16 copies** of the Russian text, then a tail (u16 0, u16 number of options). A select uses one flag slot per option. RUS slots run up to 196; JP slots differ (only offsets like +2, −34 between matching selects).
+**[V]** SELECT (op 40): 8-byte head (u16 `0x6D61`, u16 **flag slot**, u16 index in script, u16 `0x4000 | first bit` in the script's chosen-option bitmap, see [Read Flags and Saves](#read-flags-and-saves)), JP text (`$d` between options), then in RUS **two UTF-16 copies** of the Russian text, then a tail (u16 0, u16 number of options). A select uses one flag slot per option. RUS slots run up to 196; JP slots differ (only offsets like +2, −34 between matching selects).
 
 **[V]** Op 43 is another text instruction (RUS adds Russian slots). It does not occur in the ported scenes.
 
 ### Metadata entries
 
-**[V]** `SCRIPT.PAK` also holds `_varset_システムフラグ`, `_arflag`, `_varstr`, `_varnum`, `_varname`, `_colorbg`, `_scr_label`, `_task`, plus `_build_time`/`_varstrname` (RUS) or `_build_count` (JP).
+**[V]** `SCRIPT.PAK` also holds `_varset_システムフラグ`, `_arflag` (bitmap sizes per script, see [Read Flags and Saves](#read-flags-and-saves)), `_varstr`, `_varnum`, `_varname`, `_colorbg`, `_scr_label`, `_task`, plus `_build_time`/`_varstrname` (RUS) or `_build_count` (JP).
 
 - `_varname`: u16 ID + NUL-terminated name. 134 names are common to both builds; IDs 6044–6069 are shifted by −1 in RUS (e.g. `SNOW` is 6069 in JP and 6068 in RUS).
 - `_scr_label`: `LZW\0`, u32 total size, u32 chunk count, then per chunk u32 code count, u32 output size, and 16-bit LZW codes (dictionary from 257). It decodes to one line per script, `LABEL:offset,` (JP) or `LABEL:offset(line),` (RUS). The offsets point into the **source text**, not the bytecode (they exceed the bytecode size). **[H]** debug source map only; the patch leaves it unchanged, and the in-game tests showed no problem.
@@ -298,7 +300,7 @@ This test found the op 3, op 74 and SELECT rules.
 | `0217-01-04` | `0217-01-06` | `0217-01-05h` |
 | `0217-99-03` | `0217-99-05END` | `0217-99-04h` |
 
-New scripts are appended at the end of `SCRIPT.PAK`, after the metadata entries, so existing entry indices do not move.
+New scripts are inserted after the last original script, before the metadata entries, as in both original archives (all scripts first). Existing script indices do not move; the metadata entries move by 4 (nothing refers to them by number except their own `_arflag` record, which is renumbered). Until 2026-10-26 they were appended after the metadata, and the game then kept no read or choice flags for them (see [Read Flags and Saves](#read-flags-and-saves)).
 
 ## What Steam Censored
 
@@ -358,9 +360,50 @@ The patch restores the JP order without changing the executable (`definitions/re
 2. `0308-02-00`: both calls of `0000-op0_HD` are replaced by the Rengoku block taken from `0209-08-00` (movie, op 123, `#12054 = 1`; without the pause), as in JP.
 3. `0209-08-00`: the Rengoku block (movie, op 123, `#12054 = 1`, pause) is removed; jumps to it go to the following JUMP.
 
-Ops 25 and 119 carry a marker ID (`0x8000 | n`, unique and ascending in script order in every script of both builds, mostly 0, 1, 2...; **[H]** purpose unknown). The two edited scripts are renumbered from 0, which gives the JP numbering. The build checks that JP `0000-op0_HD` leads to `0000-op1`, that `0308-02-00` is the only caller of the prologue and that the movie block has the expected instructions; otherwise it stops.
+Ops 25 and 119 carry a marker ID (`0x8000 | n`, unique and ascending in script order in every script of both builds, mostly 0, 1, 2...; the bit of the "passed markers" bitmap, see [Read Flags and Saves](#read-flags-and-saves)). The two edited scripts are renumbered from 0, which gives the JP numbering. The build checks that JP `0000-op0_HD` leads to `0000-op1`, that `0308-02-00` is the only caller of the prologue and that the movie block has the expected instructions; otherwise it stops.
 
 **[V]** Checked in game by the user on 2026-10-26 ("everything works").
+
+## Read Flags and Saves
+
+**[V]** Where the Steam build stores its data: through the Steam API, which the bundled emulator (`steam_api64.dll`, settings in `steam_settings/`, account ID 22202) redirects to `%APPDATA%\GSE Saves\4290390\remote\`:
+
+| File | Contents |
+| --- | --- |
+| `data000.dat` | System data (`SAVEDATA` magic; the log line `SYSDATA_SIZE=22405` at startup): global settings and flags, then one record per script (below) |
+| `dataNNN.dat`, `.info`, `.thm` | Save slots (NNN = slot), their header and thumbnail |
+| `config.dat` | Options |
+
+The empty `userdata\22202\` folder in the game folder is created by the emulator and is not used by the game. `%APPDATA%\PROTOTYPE\CARTAGRA\savedata\` only holds `config2.dat`. The JP release saves to `%APPDATA%\PROTOTYPE\<title>\savedata\` instead.
+
+**[V]** Per-script record in the system data, in `SCRIPT.PAK` order: NUL-terminated script name, then three bitmaps, each u32 byte count + bits (1 bit each), then u32 0:
+
+1. **read lines**: bit = MESSAGE/op 43 line index. "Skip read text" skips a line only when its bit is set;
+2. **chosen options**: each SELECT owns `2 * options + 1` bits from the first bit in its head (u16 at [6] = `0x4000 | first bit`). Bit `first + k` is set once option k has been chosen (in game: choosing option 0 set bit 0, choosing option 1 set bit 1); the other `options + 1` bits were never seen set (**[?]** meaning unknown). The game shows chosen options in another text color only when Options > Text1 > "Color of Previously Read Text" is "Only Choices" or "On" (see below);
+3. **passed markers**: bit = marker ID of ops 25 and 119 (`0x8000 | ID` in the first u16).
+
+**[V]** The bitmap sizes come from the `_arflag` metadata entry of `SCRIPT.PAK`: 16-byte records `u16 16, u16 0x011F, u16 0, u16 script number (entry index + 1), u16 lines, u16 select bits, u16 markers, u16 0`. Each value is the highest index used + 1 (`lines` = highest line index + 1, `select bits` = end of the last select's range, `markers` = highest marker ID + 1). This rule reproduces all 264 script records of the RUS build and all 268 of the JP build; one more record each (the last) belongs to `_varset_システムフラグ` (0, 0, 4).
+
+**[V]** Bug fixed on 2026-10-26: the patch did not update `_arflag`. The 20 ported scenes kept the sizes of Steam's short versions (for example `0208-13-01H`: 8 lines instead of 351), the 4 added scenes had no record, and `0308-02-00` kept 3 markers instead of 5. The user's system data showed exactly those sizes. Reported in game: "Skip read text" skipped unread text, and chosen options were not remembered. **[H]** Lines and options beyond a bitmap count as read and their bits are not stored. The build now recomputes the record of every script and adds records for new scripts (`script_port.rebuild_arflag`; a no-op on the unmodified RUS `SCRIPT.PAK`). The new values of the 24 restored scenes equal the JP records.
+
+**[V]** The game keeps per-script records in the system data only for the scripts before the metadata entries (up to the `_varset...` record, which is last in both originals). With the 4 added scenes appended after the metadata, they got no records even with `_arflag` records. The build therefore inserts new scripts before the metadata entries and writes the records sorted by number.
+
+**[V]** Existing system data is migrated: with the new `SCRIPT.PAK` the game read the user's `data000.dat` (written with the old sizes) and on the next save wrote every record with the new size, keeping all old bits (20 restored scenes resized; nothing else changed).
+
+**[V]** The system data is written to disk when the player saves (also quick save), not when the game quits. Read lines and choices after the last save are lost on quitting. This is the game's behaviour, not the patch's.
+
+**[V]** In-game test, 2026-10-26 (test build starting in the added scene `0217-01-05h`, window 1280×720):
+
+- SKIP is greyed out on unread lines. After reading 11 lines, returning to the title and starting again, SKIP was enabled and stopped exactly at the last line read.
+- After fast-forwarding to the first choice and choosing the first option, SKIP (read text only) ran through all 68 lines up to the choice. (The darker box of that option seen then is not the chosen-option marker; see the next paragraph.)
+- After a quick save, `data000.dat` had records for all 4 added scenes; `0217-01-05h` had 69 read bits and the choice bit set.
+- The user's save folder was restored from the backup afterwards, and the normal build reinstalled.
+
+**[V]** Chosen options in another color (user report after the fix, with a screenshot of the JP game: the chosen option's text is purple). This is an option, not a bug: Options > Text1 > "Color of Previously Read Text" = Off / Only Choices / On, plus "Read Text Color" (a slider from yellow to purple; default purple-blue) when it is not Off. It was Off in the user's `config.dat`, so no chosen option was colored, in native Steam scenes too. Checked in game on 2026-10-26:
+
+- Off: in native `0207-06-00` (the user's data: both options chosen before, bits `03`) both options white.
+- On: both options of that choice in lavender (every previously read line is colored).
+- Only Choices, in the restored `0217-01-05h` (test build, record empty): both options white; after choosing the second option and coming back, that option was lavender (text pixels about (160,160,255)) and the first stayed white, as in the JP screenshot.
 
 ## EVENTCG.PAK Comparison
 
@@ -442,7 +485,7 @@ Repository contents: `pak.py`, `SCRIPT.PAK`, `SCRIPT_FHD/` (`solvev2.py` text ex
 1. **EVENTCG**: read `<target>/image/EVENTCG.PAK`, append the JP-only entries (`lucapak.append_missing`: parents remapped by name, xxh64 computed), replace the censored entries in place (`replace_from`) and append the split copy `e047_jp` (`append_copy`). Untouched entries are byte-identical and in their original order (verified).
    **OTHCG**: replace the 16 censored pictures in place.
 2. **VOICE**: the same for `VOICE.PAK` with `VOICE0.PAK` as donor, copying section values.
-3. **SCRIPT**: build the name maps (images over all target image archives with the new EVENTCG; voices with the new VOICE; variables from `_varname`), the translation memory and the first free select slot. Port the 24 scenes, check every jump target, write the translation tables, retarget the 4 predecessor JUMPs and append the 4 new scenes. Then apply the two target script fixes for censored pictures and restore the [start sequence](#start-sequence) (3 scripts). 251 of 274 entries stay byte-identical.
+3. **SCRIPT**: build the name maps (images over all target image archives with the new EVENTCG; voices with the new VOICE; variables from `_varname`), the translation memory and the first free select slot. Port the 24 scenes, check every jump target, write the translation tables, retarget the 4 predecessor JUMPs and insert the 4 new scenes before the metadata entries. Then apply the two target script fixes for censored pictures and restore the [start sequence](#start-sequence) (3 scripts). Finally recompute `_arflag` for all scripts ([Read Flags and Saves](#read-flags-and-saves)). 250 of 274 entries stay byte-identical.
 4. **Output**: write `BUILD_INFO.txt` and move the staging folder to `dist/<lang>/`.
 
 **Obsolete (moved to `local/legacy/`, outside git, on 2026-10-26):** `pak_tool.py`, `create_patch.py`, `Patch/create_patch.py` and their outputs (`EVENTCG_patched.PAK`, `EVENTCG_patched/`, `PATCH_REPORT.md`). `pak_tool.py pack` rewrites the header (`id_start` = 1, sections dropped, entries sorted), which caused the bug. `create_patch.py` also replaced only `[:5]` of the 27 size-different files while reporting 27. The useful parts of `pak_tool.py` (`unpack`, `compare`) are now `lucapak` commands; there is deliberately no `pack` command.
@@ -510,6 +553,7 @@ Test setup: `CARTAGRA.exe`, window resized to 1280×720 (on a 2048×1280 screen 
 | 2026-10-26 | full patch with restored pictures, test start `0207-15-00` | Photo picture | **[V]** `f035` uncensored at the line of the user's report |
 | 2026-10-26 | same | Restored pictures | **[V]** confirmed in game by the user |
 | 2026-10-26 | full patch with the start sequence | New Game | **[V]** prologue, opening and the following scenes work; confirmed in game by the user |
+| 2026-10-26 | `_arflag` fix, test start `0217-01-05h` | Skip read text, remembered choice, system data | **[V]** SKIP stops at the first unread line; the chosen option is marked; records of the added scenes saved (see [Read Flags and Saves](#read-flags-and-saves)) |
 
 The 4 scenes added last (`0210-10-00`, `0214-05-00`, `0215-03-00`, `0215-05-02`) went through the same automatic checks but have not been played in game.
 
@@ -522,15 +566,15 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 | Area | Tests |
 | --- | --- |
 | Archives | xxHash64 test vectors; byte-identical PAK round trip; appending keeps the IDs of existing entries and remaps parent IDs by name; in-place replacement keeps the ID |
-| Scripts | jump targets relocated after inserting an odd-length instruction; start sequence: call inserted after the setup instructions, movie block cut (jumps redirected, marker IDs renumbered), calls replaced by the movie (jumps land on it) |
+| Scripts | `_arflag` counts (lines incl. op 43, select bit ranges, markers) and record rebuild (stale record fixed, metadata record kept, missing record appended); jump targets relocated after inserting an odd-length instruction; start sequence: call inserted after the setup instructions, movie block cut (jumps redirected, marker IDs renumbered), calls replaced by the movie (jumps land on it) |
 | Images | CZ4 decode of an image made by a test encoder (2 LZW blocks, delta bands); alpha compositing |
 | Translation tables | write/read round trip with escapes and the five-column header; older formats (`source`/`existing`/`translation`, `ru_existing`/`ru`); missing table |
 | Languages and paths | every language has a valid status and an existing input set; `en` is not `complete`; unknown language rejected; project paths are absolute and independent of the working directory; output names `ru`, `ru-partial`, `ru-test` |
 | Input validation | missing folder and files; wrong entry count; wrong size; changed data detected by SHA-256 and skipped with `verify_checksums=False` |
 | CLI | `--help` (0), no language (2), unknown language (2), `--test-set` without `--test-start` (2), `--list-languages` shows the statuses, missing inputs (1); run from a working directory with spaces, inputs in a folder with spaces |
-| Integration (`CARTAGRA_INTEGRATION=1`) | `ru` build from `inputs/` into a temporary folder without tables and start sequence (equal to the SHA-256 of the pre-refactoring build), then twice with both (identical output; New Game calls the prologue, `0308-02-00` no longer does); inputs still pass the checksum check and are not modified |
+| Integration (`CARTAGRA_INTEGRATION=1`) | `ru` build from `inputs/` into a temporary folder as the reference build (`reference=True`: no tables, start sequence or `_arflag` update; equal to the SHA-256 of the pre-refactoring build), then twice normally (identical output; New Game calls the prologue, `0308-02-00` no longer does; `_arflag` correct for every script); inputs still pass the checksum check and are not modified |
 
-**[V]** 2026-10-26 (after the start sequence): 19 unit tests pass; the integration test passes (105 s). `python build.py --language ru` (with input checksums) takes about 40 s and reproduces the reference SHA-256 of all four archives; `--language en --check` fails with exit code 1 because `inputs/en-steam/files/` does not exist.
+**[V]** 2026-10-26 (after the `_arflag` fix and the new-script placement): 21 unit tests and the integration test pass (106 s in total). `python build.py --language ru` (with input checksums) takes about 40 s and reproduces the reference SHA-256 of all four archives; `--language en --check` fails with exit code 1 because `inputs/en-steam/files/` does not exist.
 
 ## Known Issues
 
@@ -544,6 +588,8 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 8. Restored pictures: the JP 4368×2457 pan image `e007k0` is not used (the RUS script shows the static uncensored `e007` instead), and Steam's own frame `e007k0` is no longer shown.
 9. `_scr_label` is not updated for the ported scenes (**[H]** debug data only).
 10. 21 of the 24 restored scenes have not been played in game.
+11. Read lines and chosen options are written to disk only when saving (game behaviour; see [Read Flags and Saves](#read-flags-and-saves)).
+
 ## Open Questions
 
 - Do saves inside changed scripts survive? (Test: save in a ported scene, reload.)

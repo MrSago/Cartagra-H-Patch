@@ -30,12 +30,14 @@ INFO_FILE = "BUILD_INFO.txt"
 
 class BuildOptions:
     def __init__(self, language, jp_dir, target_dir, voice=True, scenes=None, test_start=None, test_set=(),
-                 start_sequence=True):
+                 reference=False):
         self.language = language  # loaded languages/<code>/language.json (project.load_language)
         self.jp_dir = jp_dir
         self.target_dir = target_dir
         self.voice = voice
-        self.start_sequence = start_sequence  # False only to compare with builds made before it existed
+        # True reproduces the build tested before 2026-10-26 (no start sequence, no _arflag update, new scripts
+        # after the metadata entries): tests only
+        self.reference = reference
         self.scenes = scenes  # None = all
         self.test_start = test_start
         self.test_set = list(test_set)  # [(var, value)]
@@ -137,6 +139,9 @@ def run_build(opt, restoration, log=print):
     jp_script = LucaPak.read(os.path.join(jp, "SCRIPT.PAK"))
     jp_by = {e.name: e for e in jp_script.entries}
     tg_by = {e.name: e for e in tg_script.entries}
+    tg_names = [e.name for e in tg_script.entries]
+    first_meta = len(tg_script.entries) if opt.reference else next(
+        k for k, e in enumerate(tg_script.entries) if e.name.startswith("_"))
     res = sp.ResourceMap(
         archive_index(jp, "image"), archive_index(tg, "image", {"EVENTCG.PAK": eventcg_out}),
         archive_index(jp, "voice"), archive_index(tg, "voice", {"VOICE.PAK": voice_index_path}),
@@ -172,8 +177,12 @@ def run_build(opt, restoration, log=print):
                 raise BuildError(f"{pred} (predecessor of {name}) is not in the target SCRIPT.PAK")
             pdata, n = sp.retarget_jump(tg_by[pred].data, jp_by[pred].data, name, jp_exit)
             set_entry(tg_by[pred], pdata)
-            tg_script.entries.append(type(tg_by[pred])(name, data, b"", {}))
-            set_entry(tg_script.entries[-1], data)
+            # scripts come before the metadata entries, as in the originals: the game keeps read and
+            # choice flags only for those (the metadata entries move; nothing refers to them by number)
+            new = type(tg_by[pred])(name, data, b"", {})
+            set_entry(new, data)
+            tg_script.entries.insert(first_meta, new)
+            first_meta += 1
             how = f"added; {pred} now jumps here instead of {jp_exit}"
         else:
             if name not in tg_by:
@@ -203,13 +212,18 @@ def run_build(opt, restoration, log=print):
         set_entry(tg_by[name], data)
         log(f"  {name:12s} script fix: {fix['kind']} {fix['image']} ({n}x)")
 
-    if opt.start_sequence:
+    if not opt.reference:
         _restore_start_sequence(log, restoration, jp_by, tg_by, scenes)
 
     if opt.test_start:
         start = restoration["new_game_script"]
         set_entry(tg_by[start], test_stub(tg_by[start].data, opt.test_start, opt.test_set))
         log(f"  TEST BUILD: {start} replaced by a stub that jumps to {opt.test_start}")
+    if not opt.reference:
+        arflag = tg_by["_arflag"]
+        data, changed = sp.rebuild_arflag(arflag.data, tg_names, tg_script.entries)
+        set_entry(arflag, data)
+        log(f"  _arflag: read/choice flag sizes updated for {len(changed)} scripts")
     script_out = os.path.join(files_out, "SCRIPT.PAK")
     tg_script.write(script_out)
     log(f"  SCRIPT.PAK: {len(scenes)} scenes ({total['rus']} existing lines reused, {total['tsv']} translated, "

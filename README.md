@@ -180,6 +180,8 @@ When you report a problem, give the scene name if you know it (for example `0208
 - `0210-10-00` and `0215-03-00` show the Japanese date screen instead of the English one.
 - In `0210-99-01`, the Russian release shows Steam's substitute picture (a kiss) just before the restored scene; this picture is kept.
 - In `0208-15-00`, Steam's own extra frame is no longer shown; the scene shows the original frames instead.
+- Before 2026-10-26 the patch did not update the read-text and choice records, so in restored scenes "Skip read text" skipped unread lines and chosen options were not remembered. Fixed and tested in game. The game writes this data only when you save (also quick save), not when you quit. It keeps this data in `%APPDATA%\GSE Saves\4290390\remote\data000.dat` (the bundled Steam emulator puts all saves there; the empty `userdata` folder in the game folder is not used). Back up that folder before installing a new build.
+- Chosen options are shown in another color only if **Options > Text1 > "Color of Previously Read Text"** is set to "Only Choices" (chosen options only, as in the Japanese release) or "On" (all read text). With "Off" the game still remembers your choices but doesn't mark them.
 - The English build has never been made or tested.
 - There is no installer.
 

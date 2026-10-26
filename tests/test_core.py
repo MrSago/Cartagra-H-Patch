@@ -25,7 +25,7 @@ from cartagra_patch import script_port as sp  # noqa: E402
 from cartagra_patch.lucapak import Entry, LucaPak, SEC_HASH, SEC_PARENT, append_missing, replace_from, xxh64_pure  # noqa: E402
 
 # SHA-256 of the ru patch made by the pre-refactoring build_patch.py (installed and tested in game),
-# i.e. without translation tables and without the start sequence; both only change SCRIPT.PAK
+# i.e. without translation tables, start sequence and _arflag update; these only change SCRIPT.PAK
 REFERENCE_RU = {
     "SCRIPT.PAK": "578b31f79f8d8a8b041bfa44e4e7b34c3b04dcf949ce8fc870ad877b2d5271ae",
     "image/EVENTCG.PAK": "a390601d1758eee655f632c55ecc6cf586a8e3ba62f3ea86981a6ec74e2774c4",
@@ -198,6 +198,37 @@ class StartSequenceTests(unittest.TestCase):
         self.assertEqual(sp.calls_to(data, "pro"), 0)
 
 
+def message(line):
+    return op(sp.OP_MESSAGE, sp.build_rus_message(line, 0, "あ", "а", b"\x0b\x0a\0\0\0"), line)
+
+
+def select(first_bit, options):
+    head = struct.pack("<4H", 0x6D61, 197, 0, 0x4000 | first_bit)
+    text = "$d".join("x" * options)
+    return op(sp.OP_SELECT, sp.build_rus_select(head, text, text, struct.pack("<HH", 0, options)))
+
+
+class ReadFlagTests(unittest.TestCase):
+    def test_arflag_counts(self):
+        data = build_script([message(0), message(7), select(0, 3), select(7, 2), op(25, b"\x00\x80"),
+                             named(sp.OP_MOVIE_RUS, "m", b"\x02\x80"), op(43, struct.pack("<H", 9) + b"\0" * 5)])
+        # lines: highest index 9 (op 43) + 1; selects: 7 + 2 * 2 + 1; markers: highest ID 2 + 1
+        self.assertEqual(sp.arflag_counts(data), (10, 12, 3))
+        self.assertEqual(sp.arflag_counts(build_script([op(26)])), (0, 0, 0))
+
+    def test_rebuild_arflag(self):
+        s1, meta = Entry("s1", build_script([message(0), message(1)])), Entry("_meta", b"x")
+        old = (sp.ARFLAG_RECORD.pack(16, 0x11F, 0, 1, 2, 0, 0, 0)      # s1: up to date
+               + sp.ARFLAG_RECORD.pack(16, 0x11F, 0, 2, 0, 0, 4, 0))   # _meta: kept as is
+        self.assertEqual(sp.rebuild_arflag(old, ["s1", "_meta"], [s1, meta]), (old, []))
+        # s1 changed; new script s2 inserted before the metadata entry, whose record moves to number 3
+        s1.data = build_script([message(0), message(30)])
+        data, changed = sp.rebuild_arflag(old, ["s1", "_meta"], [s1, Entry("s2", build_script([message(4)])), meta])
+        self.assertEqual(changed, ["s1", "s2"])
+        self.assertEqual([sp.ARFLAG_RECORD.unpack_from(data, k) for k in range(0, len(data), 16)],
+                         [(16, 0x11F, 0, 1, 31, 0, 0, 0), (16, 0x11F, 0, 2, 5, 0, 0, 0), (16, 0x11F, 0, 3, 0, 0, 4, 0)])
+
+
 class CzToolTests(unittest.TestCase):
     def test_cz4_decode(self):
         rnd = random.Random(1)
@@ -333,8 +364,8 @@ def tree_hashes(folder):
 class IntegrationTests(unittest.TestCase):
     """
     Builds ru from the real inputs into a temporary folder (not the project's build/ or dist/):
-    once without translation tables and start sequence (must equal the reference), twice with both
-    (must be identical; New Game must call the prologue).
+    once as the reference build (no tables, start sequence or _arflag update; must equal the reference),
+    twice normally (must be identical; New Game must call the prologue; _arflag must match every script).
     """
 
     def test_ru_build_is_reproducible_and_leaves_inputs_alone(self):
@@ -356,11 +387,12 @@ class IntegrationTests(unittest.TestCase):
                 for tables, start in ((os.path.join(tmp, "no tables"), False),
                                       (lang["translation_dir"], True), (lang["translation_dir"], True)):
                     opt = pipeline.BuildOptions(dict(lang, translation_dir=tables), dirs["jp-fhd"], dirs[lang["target"]],
-                                                start_sequence=start)
+                                                reference=not start)
                     dist = pipeline.run_build(opt, project.load_restoration(), log=quiet)
                     hashes.append(tree_hashes(dist))
                     shutil.rmtree(os.path.join(tmp, "build"))
-                script = {e.name: e.data for e in LucaPak.read(os.path.join(dist, "files", "SCRIPT.PAK")).entries}
+                entries = LucaPak.read(os.path.join(dist, "files", "SCRIPT.PAK")).entries
+                script = {e.name: e.data for e in entries}
             finally:
                 pipeline.BUILD_DIR, pipeline.DIST_DIR = saved
         files = [{k[len("files/"):]: v for k, v in h.items() if k.startswith("files/")} for h in hashes]
@@ -368,6 +400,7 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(hashes[1], hashes[2])
         self.assertEqual(sp.calls_to(script["0000-op1"], "0000-op0_HD"), 1)
         self.assertEqual(sp.calls_to(script["0308-02-00"], "0000-op0_HD"), 0)
+        self.assertEqual(sp.rebuild_arflag(script["_arflag"], [e.name for e in entries], entries)[1], [])  # every script has a correct record
         self.assertEqual({k: v for k, v in files[1].items() if k != "SCRIPT.PAK"},
                          {k: v for k, v in REFERENCE_RU.items() if k != "SCRIPT.PAK"})
         for set_name, folder in dirs.items():
