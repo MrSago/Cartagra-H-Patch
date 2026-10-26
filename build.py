@@ -121,7 +121,7 @@ def main(argv=None):
 
     print(f"Done in {time.time() - t0:.0f} s. Patch files: {dist}")
     print(f"  see {os.path.join(dist, 'BUILD_INFO.txt')} for the destination of each file")
-    print(f"  refreshed translation tables: {os.path.join(project.BUILD_DIR, opt.output_name, 'translation')}")
+    print(f"  translation tables: {os.path.join(project.BUILD_DIR, opt.output_name, 'translation')}")
     return EXIT_OK
 
 

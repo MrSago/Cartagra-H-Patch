@@ -65,3 +65,14 @@ Single-player VN, no anti-cheat.
 - The installed game was not touched in this session.
 - Original translation tables (commit `2265978`, `translation/*.tsv`) restored byte for byte from git into `languages/_original/` as a basis for other languages; not read by the build.
 - Git history reset: the old repository (6 commits, 1.2 GB, including the 544 MB `EVENTCG_patched.PAK` and unpacked CGs) is kept in `local/legacy2/` (full `.git` plus the working tree of that moment). The project was re-initialized with an empty history; `.gitignore` now also excludes game file types (`*.PAK`, `*_unpacked/`, executables, images, audio, video, saves) anywhere in the tree.
+
+## 2026-10-26 session 5: Russian translation of the restored scenes
+
+- Source: `local/cartagra_fhd_jp/` (full-game Russian translation, Chinese-patch text format `offset|JP` / `offset|RU`; local only).
+- All 24 restored scenes align one to one with the tables (4,422 lines, identical JP). Filled the `translation` column of the 3,970 `todo` rows; none missing. The 452 rows reusing the release text are unchanged (33 worded differently in the file).
+- `0215-03-00`: leading line break added to 29 lines (release convention for that NVL passage).
+- Build: 0 untranslated lines; SCRIPT.PAK 6,380,200 bytes; EVENTCG/OTHCG/VOICE unchanged. Integration test now builds once without tables (reference hashes) and twice with them (identical).
+- Not yet checked in game.
+- Fixed mixed scripts in the added lines: 111 Latin look-alike letters inside Cyrillic words replaced by Cyrillic (50 lines, 6 scenes); nothing else changed (checked character by character). The `$d` choice separator is markup, not a stray `d`.
+- Tables: `source` set to `tsv` in all 452 Russian rows that were `rus` (label only; the build ignores this column and still reuses the release line from `existing`). `languages/_original/`: Russian text removed (`ru_existing` cleared in 452 rows) and `source` set to `todo` everywhere.
+- Table format reduced to `row kind voice jp translation`: `source` and `existing` dropped (never read by the build). Before dropping, the 452 release lines in `existing` were copied into `translation`; `SCRIPT.PAK` byte-identical. `languages/_original/` converted too (translation empty). Older formats still load.

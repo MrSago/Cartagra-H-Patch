@@ -24,7 +24,8 @@ from cartagra_patch import project  # noqa: E402
 from cartagra_patch import script_port as sp  # noqa: E402
 from cartagra_patch.lucapak import Entry, LucaPak, SEC_HASH, SEC_PARENT, append_missing, replace_from, xxh64_pure  # noqa: E402
 
-# SHA-256 of the ru patch made by the pre-refactoring build_patch.py (installed and tested in game)
+# SHA-256 of the ru patch made by the pre-refactoring build_patch.py (installed and tested in game),
+# i.e. without translation tables; the tables only change SCRIPT.PAK
 REFERENCE_RU = {
     "SCRIPT.PAK": "578b31f79f8d8a8b041bfa44e4e7b34c3b04dcf949ce8fc870ad877b2d5271ae",
     "image/EVENTCG.PAK": "a390601d1758eee655f632c55ecc6cf586a8e3ba62f3ea86981a6ec74e2774c4",
@@ -154,18 +155,21 @@ class CzToolTests(unittest.TestCase):
 
 class TsvTests(unittest.TestCase):
     def test_roundtrip_and_legacy_columns(self):
-        rows = [dict(row=0, kind="msg", voice="12", source="tsv", jp="a\tb", ru_existing="", ru_user="x\ny"),
-                dict(row=1, kind="msg", voice="0", source="todo", jp="c", ru_existing="old", ru_user="")]
+        rows = [dict(row=0, kind="msg", voice="12", jp="a\tb", translation="x\ny", source="tsv"),
+                dict(row=1, kind="msg", voice="0", jp="c", translation="", source="todo")]
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "t.tsv")
             sp.write_tsv(path, rows)
             with open(path, encoding="utf-8") as f:
-                self.assertEqual(f.readline().rstrip("\n").split("\t"), list(sp.TSV_COLUMNS))
+                self.assertEqual(f.readline().rstrip("\n").split("\t"), ["row", "kind", "voice", "jp", "translation"])
+                self.assertEqual(f.readline().rstrip("\n").split("\t"), ["0", "msg", "12", "a\\tb", "x\\ny"])
             self.assertEqual(sp.load_tsv(path), {(0, "a\tb"): "x\ny"})
-            legacy = os.path.join(d, "legacy.tsv")
-            with open(legacy, "w", encoding="utf-8") as f:
-                f.write("row\tkind\tvoice\tsource\tjp\tru_existing\tru\n0\tmsg\t0\ttsv\tjp\t\tперевод\n")
-            self.assertEqual(sp.load_tsv(legacy), {(0, "jp"): "перевод"})
+            for header, row in (("row\tkind\tvoice\tsource\tjp\tru_existing\tru", "0\tmsg\t0\ttsv\tjp\t\tперевод"),
+                                ("row\tkind\tvoice\tsource\tjp\texisting\ttranslation", "0\tmsg\t0\ttsv\tjp\tx\tперевод")):
+                legacy = os.path.join(d, "legacy.tsv")
+                with open(legacy, "w", encoding="utf-8") as f:
+                    f.write(header + "\n" + row + "\n")
+                self.assertEqual(sp.load_tsv(legacy), {(0, "jp"): "перевод"})
             self.assertEqual(sp.load_tsv(os.path.join(d, "absent.tsv")), {})
 
 
@@ -263,7 +267,10 @@ def tree_hashes(folder):
 
 @unittest.skipUnless(os.environ.get("CARTAGRA_INTEGRATION") == "1", "set CARTAGRA_INTEGRATION=1 to run")
 class IntegrationTests(unittest.TestCase):
-    """Builds ru twice from the real inputs into a temporary folder (not the project's build/ or dist/)."""
+    """
+    Builds ru from the real inputs into a temporary folder (not the project's build/ or dist/):
+    once without translation tables (must equal the reference), twice with them (must be identical).
+    """
 
     def test_ru_build_is_reproducible_and_leaves_inputs_alone(self):
         from cartagra_patch import pipeline
@@ -281,15 +288,18 @@ class IntegrationTests(unittest.TestCase):
             try:
                 pipeline.BUILD_DIR = os.path.join(tmp, "build")
                 pipeline.DIST_DIR = os.path.join(tmp, "dist")
-                for _ in range(2):
-                    opt = pipeline.BuildOptions(lang, dirs["jp-fhd"], dirs[lang["target"]])
+                for tables in (os.path.join(tmp, "no tables"), lang["translation_dir"], lang["translation_dir"]):
+                    opt = pipeline.BuildOptions(dict(lang, translation_dir=tables), dirs["jp-fhd"], dirs[lang["target"]])
                     dist = pipeline.run_build(opt, project.load_restoration(), log=quiet)
                     hashes.append(tree_hashes(dist))
                     shutil.rmtree(os.path.join(tmp, "build"))
             finally:
                 pipeline.BUILD_DIR, pipeline.DIST_DIR = saved
-        self.assertEqual(hashes[0], hashes[1])
-        self.assertEqual({k[len("files/"):]: v for k, v in hashes[0].items() if k.startswith("files/")}, REFERENCE_RU)
+        files = [{k[len("files/"):]: v for k, v in h.items() if k.startswith("files/")} for h in hashes]
+        self.assertEqual(files[0], REFERENCE_RU)
+        self.assertEqual(hashes[1], hashes[2])
+        self.assertEqual({k: v for k, v in files[1].items() if k != "SCRIPT.PAK"},
+                         {k: v for k, v in REFERENCE_RU.items() if k != "SCRIPT.PAK"})
         for set_name, folder in dirs.items():
             self.assertEqual(project.check_inputs(set_name, folder, manifest, log=quiet), [])
         self.assertEqual(mtimes, {d: os.path.getmtime(os.path.join(d, "SCRIPT.PAK")) for d in dirs.values()})

@@ -9,7 +9,8 @@ Inputs (read only):
 
 Outputs:
   build/<lang>/staging/      archives while they are being written
-  build/<lang>/translation/  refreshed translation tables (copy to languages/<lang>/translation/ to edit)
+  build/<lang>/translation/  the tables in the current format, one per restored scene (empty translation
+                             where the language has none: a starting point for new tables)
   dist/<lang>/               the finished patch: files/... + BUILD_INFO.txt
                              (replaced only after the whole build succeeded)
 """

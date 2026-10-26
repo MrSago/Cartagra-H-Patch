@@ -47,7 +47,7 @@ Module names refer to `cartagra_patch/<name>.py`. Before the 2026-10-26 refactor
 3. **[V]** The Russian release is the Steam multi-language build. Its scripts use a shifted opcode table and store an extra "English" text slot that the Russian translators filled with Russian.
 4. **[V]** Steam did not only remove images. It **rewrote** 20 scenes (most dialogue replaced by a few new lines) and **removed** 4 scenes entirely. Restoring the CGs therefore requires porting the uncensored JP scene scripts.
 5. **[V]** 1,901 voice clips (the H-scene voices) were removed from the Steam `VOICE.PAK`.
-6. **[V]** All 24 censored scenes are now ported and all 150 restored CGs are referenced. 3,970 of 4,422 restored lines have no Russian translation.
+6. **[V]** All 24 censored scenes are now ported and all 150 restored CGs are referenced. 3,970 of 4,422 restored lines have no Russian translation in the release; since 2026-10-26 the Russian tables translate all of them (see [Text for the Russian slot](#text-for-the-russian-slot)).
 7. **[V]** Steam also **edited 51 pictures** that the Russian scripts still show (35 EVENTCG, 16 OTHCG): clothes painted on, blood, wounds and corpses removed or blacked out, frames recomposed. The patch puts the JP originals back in the same slots.
 
 ## Game Installations in This Project
@@ -260,9 +260,19 @@ JP 130 sets a save thumbnail from `EVENTCG_SAVE.PAK` (argument = EVENTCG_SAVE ID
 
 The build picks, in order:
 
-1. the `translation` column of `languages/<lang>/translation/<scene>.tsv` (legacy tables: `ru`);
+1. the `translation` column of `languages/<lang>/translation/<scene>.tsv` (columns `row kind voice jp translation`; older tables: `ru`, extra columns ignored);
 2. an existing Russian line whose JP text is identical (same scene first, then any scene; 16,504 known lines);
 3. the JP text as a placeholder, with the `@speaker@` tag translated when known (37 names).
+
+**[V]** Translations added on 2026-10-26: `local/cartagra_fhd_jp/` (local only, not in git) holds a Russian translation of the whole JP game, one `<script>.txt` per script in the format of the Chinese patch's `SCRIPT_FHD/text/` (pairs of lines `offset|JP` and `offset|Russian`, `＄` = line break). For the 24 restored scenes its lines matched the tables one to one: same count (4,422) and identical JP text in the same order. Rules used to fill the `translation` column:
+
+- Filled only rows with no translation yet (`todo`): 3,970 rows, all of which have a Russian line in the file. No row was left empty.
+- The 452 rows that reused a line of the Russian release keep it. It was later copied into their `translation` column when the `source`/`existing` columns were dropped (same text, so `SCRIPT.PAK` stayed byte-identical). The file words 33 of them differently (mostly short lines like `ああ――`, and `Такако-чан` where the release writes `Такако-тян`).
+- `0215-03-00` (an NVL-style passage): the JP lines end with a line break, which the file drops; the Russian release instead starts every line after the first with one. The 29 filled lines of that scene got the leading line break, so they match the 8 lines reused from the release.
+- Latin look-alike letters inside Cyrillic words were replaced by the Cyrillic ones: 111 letters (`a` 96, `M` 8, `A` 5, `H` 1, `o` 1) in 77 words of 50 lines (`0210-03-01h`, `0215-05-02`, `0215-08-03h`, `0216-05-03h`, `0217-01-05h`, `0220-02-06h`), mostly moaning such as `Хьяaaaaа`. No word is written in Latin letters only. The release's own line in `0215-05-02` row 7 (`Aaаа`) is reused text and stays as shipped.
+- Text kept as written otherwise. The file writes no ruby (27 JP lines have `$[...$]`), which is fine.
+
+After the rebuild, no message in the Russian slot of `SCRIPT.PAK` contains kana.
 
 ### Validation
 
@@ -426,7 +436,7 @@ Refactored on 2026-10-26 so the project no longer depends on the game installati
 | `languages/<lang>/language.json`, `translation/` | Language settings and status; translation tables ([languages/README.md](languages/README.md)) | yes |
 | `tests/test_core.py` | Automated tests (standard library `unittest`) | yes |
 | `inputs/<set>/files/` | Local copies of the original files | no |
-| `build/<name>/staging/`, `build/<name>/translation/` | Archives while being written; refreshed translation tables | no |
+| `build/<name>/staging/`, `build/<name>/translation/` | Archives while being written; the translation tables in the current format | no |
 | `dist/<name>/` | Finished patch: `files/...` + `BUILD_INFO.txt` | no |
 | `local/legacy/` | Old tools, unpacked archives and outputs (kept for reference, not used) | no |
 
@@ -439,13 +449,13 @@ Refactored on 2026-10-26 so the project no longer depends on the game installati
 - **[V]** Reproducible: no timestamps or absolute paths in the output; two builds from the same inputs give identical files (integration test).
 - **[V]** The refactored build produces the same bytes as the previous `build_patch.py` for `ru` (SHA-256 of all four archives compared, 2026-10-26).
 - `dist/<name>/` is replaced only after the whole build succeeded, and only if it contains a `BUILD_INFO.txt` (a folder the build did not make is never deleted).
-- TSV tables: the build reads `languages/<lang>/translation/` and writes to `build/<name>/translation/`; it never writes into `languages/`. New header: `row kind voice source jp existing translation`. Tables with the old `ru_existing`/`ru` columns are still read.
+- TSV tables: the build reads `languages/<lang>/translation/` and writes to `build/<name>/translation/`; it never writes into `languages/`. Header: `row kind voice jp translation`. The build reads only `row`, `jp` and `translation` (by column name), so older tables with `source`/`existing` or `ru_existing`/`ru` columns still load. Which text a line gets (table, release line, Japanese) is reported in the build log, not stored in the tables.
 
 ## Language Targets
 
 | Code | Input set | Status | Evidence |
 | --- | --- | --- | --- |
-| `ru` | `ru-steam` | incomplete | Built and tested in game; 3,970 untranslated lines |
+| `ru` | `ru-steam` | incomplete | Built and tested in game; all restored lines translated, the 3,970 added lines not yet checked in game |
 | `en` | `en-steam` | untested | Never built |
 
 **[H]** The English Steam release is assumed to be the same multi-language build as the Russian one before translation: the same archives, opcode table and script names, with English in the "EN" text slot. If so, the same restoration rules apply and the porter fills the EN slot with existing English lines where the JP text matches. Unverified points:
@@ -484,7 +494,7 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 | Archives | xxHash64 test vectors; byte-identical PAK round trip; appending keeps the IDs of existing entries and remaps parent IDs by name; in-place replacement keeps the ID |
 | Scripts | jump targets relocated after inserting an odd-length instruction |
 | Images | CZ4 decode of an image made by a test encoder (2 LZW blocks, delta bands); alpha compositing |
-| Translation tables | write/read round trip with escapes; legacy `ru` column; missing table |
+| Translation tables | write/read round trip with escapes and the five-column header; older formats (`source`/`existing`/`translation`, `ru_existing`/`ru`); missing table |
 | Languages and paths | every language has a valid status and an existing input set; `en` is not `complete`; unknown language rejected; project paths are absolute and independent of the working directory; output names `ru`, `ru-partial`, `ru-test` |
 | Input validation | missing folder and files; wrong entry count; wrong size; changed data detected by SHA-256 and skipped with `verify_checksums=False` |
 | CLI | `--help` (0), no language (2), unknown language (2), `--test-set` without `--test-start` (2), `--list-languages` shows the statuses, missing inputs (1); run from a working directory with spaces, inputs in a folder with spaces |
@@ -494,7 +504,7 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 
 ## Known Issues
 
-1. 3,970 restored lines show Japanese text (placeholder) until translated in `languages/ru/translation/`.
+1. The 3,970 Russian lines added on 2026-10-26 have not been checked in game (line length, line breaks, choice menus).
 2. **[?]** Saves made inside the 24 changed scenes or the 4 retargeted predecessors may break after installing or removing the patch (they store positions in scripts whose layout changed). Not tested.
 3. **[H]** New select flag slots (197+) assume the engine's flag array is large enough. The JP build uses slots up to 229 (plus its options), and the in-game choice test worked.
 4. Save thumbnails for restored scenes are not set (JP op 130 dropped); `EVENTCG_SAVE.PAK` is unused.
@@ -514,7 +524,7 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 
 ## Roadmap
 
-1. Translate the 3,970 restored lines (`languages/ru/translation/*.tsv`), then rebuild.
+1. Check the added Russian lines in game; proofread them (see [Text for the Russian slot](#text-for-the-russian-slot)).
 2. Play through the remaining 21 restored scenes; test saves and loads.
 3. Investigate the gallery and replay data so restored CGs and scenes are listed.
 4. Translate the text inside restored CG images (CZ4 tools; would go into `languages/<lang>/`).

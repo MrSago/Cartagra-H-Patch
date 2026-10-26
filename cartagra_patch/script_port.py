@@ -111,13 +111,14 @@ def tsv_unescape(s):
     return re.sub(r"\\(.)", lambda m: {"t": "\t", "n": "\n"}.get(m.group(1), m.group(1)), s)
 
 
-TSV_COLUMNS = ("row", "kind", "voice", "source", "jp", "existing", "translation")
+TSV_COLUMNS = ("row", "kind", "voice", "jp", "translation")
 
 
 def load_tsv(path):
     """
     {(row, jp): text} for rows with a non-empty translation column.
-    Also reads tables written before the language split (columns ru_existing, ru).
+    Older tables (with extra source/existing columns, or "ru" instead of
+    "translation") are read too; columns are found by name.
     """
     out = {}
     if not os.path.exists(path):
@@ -137,15 +138,15 @@ def load_tsv(path):
 
 def write_tsv(path, rows):
     """
-    Columns: see TSV_COLUMNS. "existing" is regenerated on every build (the line
-    reused from the target build's own scripts, for reference); "translation" is
-    the translator's column and always wins.
+    Columns: see TSV_COLUMNS. "translation" is the translator's column: when it
+    is not empty it is used, otherwise the build falls back to an identical line
+    of the target build, then to the Japanese text.
     """
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write("\t".join(TSV_COLUMNS) + "\n")
         for r in rows:
-            cells = [str(r["row"]), r["kind"], r["voice"], r["source"], r["jp"], r["ru_existing"], r["ru_user"]]
+            cells = [str(r["row"]), r["kind"], r["voice"], r["jp"], r["translation"]]
             f.write("\t".join(tsv_escape(c) for c in cells) + "\n")
 
 
@@ -273,7 +274,8 @@ def _map_expr(raw, res):
 def port_script(jp_data, res, tr, tsv=None, script=None):
     """
     Convert one JP script to the RUS dialect.
-    Returns (bytes, rows) where rows describe every text line for the TSV.
+    Returns (bytes, rows) where rows describe every text line for the TSV
+    (plus "source": tsv, rus = line of the target build, todo = Japanese shown).
     """
     tsv = tsv or {}
     src = ls.parse(jp_data)
@@ -289,16 +291,14 @@ def port_script(jp_data, res, tr, tsv=None, script=None):
         body = ins.body
         if ins.op == OP_MESSAGE:
             line, voice, jp, tail = parse_jp_message(body)
-            ru, source, known, user = _pick(row, jp, tr, tsv, script)
-            rows.append(dict(row=row, kind="msg", voice=str(voice), source=source, jp=jp,
-                             ru_existing=known, ru_user=user))
+            ru, source, user = _pick(row, jp, tr, tsv, script)
+            rows.append(dict(row=row, kind="msg", voice=str(voice), jp=jp, translation=user, source=source))
             row += 1
             body = build_rus_message(line, res.map_voice(voice), jp, ru, tail)
         elif ins.op == OP_SELECT:
             head, jp, _, tail = parse_select(body, rus=False)
-            ru, source, known, user = _pick(row, jp, tr, tsv, script)
-            rows.append(dict(row=row, kind="select", voice="", source=source, jp=jp,
-                             ru_existing=known, ru_user=user))
+            ru, source, user = _pick(row, jp, tr, tsv, script)
+            rows.append(dict(row=row, kind="select", voice="", jp=jp, translation=user, source=source))
             row += 1
             # every ported select is new to the RUS build: give it unused flag slots
             head = head[:2] + struct.pack("<H", res.next_select_id) + head[4:]
@@ -335,14 +335,14 @@ def port_script(jp_data, res, tr, tsv=None, script=None):
 
 
 def _pick(row, jp, tr, tsv, script):
-    """Return (text for the RUS slot, source, existing Russian line or "", translator's line or "")."""
-    known = tr.lookup(jp, script) or ""
+    """Return (text for the RUS slot, source, translator's line or "")."""
     user = tsv.get((row, jp), "")
     if user:
-        return user, "tsv", known, user
+        return user, "tsv", user
+    known = tr.lookup(jp, script) or ""
     if known or not jp:
-        return known, "rus", known, ""
-    return tr.placeholder(jp), "todo", "", ""
+        return known, "rus", ""
+    return tr.placeholder(jp), "todo", ""
 
 
 OP_IMAGE_RUS, OP_MOVE_RUS = 55, 58

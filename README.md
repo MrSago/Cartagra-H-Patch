@@ -10,7 +10,7 @@ Technical details, file formats and reverse-engineering notes are in [TECHNICAL_
 
 | Language | Build command | Target release | Status |
 | --- | --- | --- | --- |
-| Russian (`ru`) | `python build.py --language ru` | Russian 2026 release by Innocence translations and The Hounds of God (Steam build) | **Incomplete.** Built and tested in game. 3,970 of the 4,422 restored lines are not translated yet and show the Japanese text |
+| Russian (`ru`) | `python build.py --language ru` | Russian 2026 release by Innocence translations and The Hounds of God (Steam build) | **Incomplete.** Built and tested in game. All 4,422 restored lines are translated; 3,970 of them were added on 2026-10-26 and have not been checked in game yet |
 | English (`en`) | `python build.py --language en` | English Steam release | **Untested.** Never built: the English Steam files were not available. It may not work at all |
 
 `python build.py --list-languages` shows the same list. Each build writes its status into `BUILD_INFO.txt` next to the patch files.
@@ -23,7 +23,7 @@ Technical details, file formats and reverse-engineering notes are in [TECHNICAL_
 | CGs | 150 event CGs that Steam removed |
 | Edited pictures | 51 pictures that Steam edited (clothes added, blood, wounds and bodies hidden) are replaced by the originals |
 | Voices | 1,901 voice clips of the restored scenes |
-| Text | Restored lines reuse the existing translation where the same line exists elsewhere in the game; all other lines show the Japanese text until they are translated |
+| Text | Restored lines use the language's translation tables, then the existing translation where the same line exists elsewhere in the game; lines with neither show the Japanese text |
 
 The patch replaces four files of the game:
 
@@ -144,21 +144,19 @@ If an old version of this patch installed `EVENTCG_SAVE.PAK` into `files\image\`
 
 ## Translating the Restored Scenes
 
-Each restored scene has a table in `languages/<lang>/translation/<scene>.tsv` (UTF-8, tab-separated). Fill in the `translation` column and build again.
+Each restored scene has a table in `languages/<lang>/translation/<scene>.tsv` (UTF-8, tab-separated). Fill in the `translation` column and build again. A row with an empty `translation` shows an identical line of the target release if there is one, otherwise the Japanese text.
 
 | Column | Meaning |
 | --- | --- |
 | `row` | Line number inside the scene |
 | `kind` | `msg` (dialogue) or `select` (choice; options are separated by `$d`) |
 | `voice` | Voice ID in the Japanese release (0 = no voice) |
-| `source` | Where the shown text comes from: `rus` = an existing line of the target release, `tsv` = your translation, `todo` = untranslated (Japanese shown) |
 | `jp` | Japanese original (do not edit) |
-| `existing` | Existing line of the target release, for reference |
-| `translation` | **Your translation.** When it is not empty, it is used |
+| `translation` | **The translation.** When it is not empty, it is shown in the game |
 
 Keep the engine markup: `@Name@` at the start sets the speaker name (for example `@Казуна@`), `$d` separates choices, `$[base$/ruby$]` is ruby text. Write a line break as `\n` and a tab as `\t`.
 
-The build never changes the tables in `languages/`. It writes refreshed copies (with the `source` and `existing` columns updated) to `build/<lang>/translation/`; copy them back to `languages/<lang>/translation/` when you want to keep the update. Tables in the old format (with a `ru` column) are still read. To translate into a new language, start from the original tables in [languages/_original/](languages/_original/README.md).
+The build never changes the tables in `languages/`. It writes a copy of every table, in the current format, to `build/<lang>/translation/`; for a language without tables these are empty tables to start from. Tables in older formats (with `source` and `existing` columns, or `ru` instead of `translation`) are still read. To translate into a new language, start from the original tables in [languages/_original/](languages/_original/README.md).
 
 ## Testing Status
 
@@ -174,7 +172,7 @@ When you report a problem, give the scene name if you know it (for example `0208
 
 ## Known Limitations
 
-- 3,970 restored lines show Japanese text until they are translated.
+- The 3,970 Russian lines added to the restored scenes on 2026-10-26 have not been checked in game yet.
 - Restored CGs may not appear in the Extras CG gallery, and restored scenes are not in scene replay.
 - Restored scenes have no save thumbnails.
 - `0210-10-00` and `0215-03-00` show the Japanese date screen instead of the English one.
