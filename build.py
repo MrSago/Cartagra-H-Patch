@@ -33,6 +33,9 @@ def parse_args(argv):
     ap.add_argument("-l", "--language", help="target language code (see --list-languages)")
     ap.add_argument("--list-languages", action="store_true", help="show the available languages and their status")
     ap.add_argument("--check", action="store_true", help="only check that the input files are present and original")
+    ap.add_argument("--export-images", action="store_true",
+                    help="export the interface pictures with text as PNG to the language's interface originals "
+                         "(languages/_original_steam/en/images/) and copy the missing ones to languages/<lang>/images/")
     ap.add_argument("--inputs", metavar="DIR", help="folder with the input sets (default: <project>/inputs)")
     ap.add_argument("--jp-files", metavar="DIR", help="Japanese FHD files/ folder (default: <inputs>/jp-fhd/files)")
     ap.add_argument("--target-files", metavar="DIR", help="target release files/ folder (default: <inputs>/<target>/files)")
@@ -55,6 +58,28 @@ def print_languages():
     for code, cfg in project.available_languages().items():
         print(f"{code}  {cfg['name']:8s} {cfg['status']:10s} target: {cfg['target']}")
         print(f"    {cfg['status_note']}")
+
+
+def export_images(lang, target_dir):
+    """--export-images: originals to <interface_original>/images/, missing copies to languages/<lang>/images/."""
+    from cartagra_patch import images
+
+    if not lang["interface_original_dir"]:
+        print(f"error: languages/{lang['code']}/language.json has no interface_original", file=sys.stderr)
+        return EXIT_FAILED
+    out = os.path.join(lang["interface_original_dir"], "images")
+    print(f"Exporting interface pictures from {target_dir}")
+    try:
+        rows = images.load_list(os.path.join(lang["interface_original_dir"], "images.tsv"))
+        n = images.export(target_dir, rows, out, log=lambda m: print(m, flush=True))
+    except (ValueError, OSError) as e:
+        print(f"error: {e}", file=sys.stderr)
+        return EXIT_FAILED
+    copied = images.copy_missing(out, lang["images_dir"])
+    print(f"{n} pictures written to {out}")
+    print(f"{copied} copied to {lang['images_dir']} ({n - copied} were there already and were kept)")
+    print("Edit the copies; the build replaces only pictures that differ from the originals.")
+    return EXIT_OK
 
 
 def main(argv=None):
@@ -80,6 +105,9 @@ def main(argv=None):
     jp_dir = os.path.abspath(args.jp_files) if args.jp_files else os.path.join(inputs, "jp-fhd", "files")
     target_dir = os.path.abspath(args.target_files) if args.target_files else os.path.join(inputs, lang["target"], "files")
 
+    if args.export_images:
+        return export_images(lang, target_dir)
+
     print(f"Cartagra patch build: {lang['code']} ({lang['name']}) - status: {lang['status']}")
     if lang["status"] != "complete":
         print(f"  NOTE: {lang['status_note']}")
@@ -87,13 +115,16 @@ def main(argv=None):
         manifest = project.load_manifest()
         restoration = project.load_restoration()
         print("Checking inputs" + (" (sizes and entry counts only)" if args.skip_checksums else ""))
-        sets = (("jp-fhd", jp_dir), (lang["target"], target_dir))
-        for set_name, folder in sets:
+        needed = project.needed_optional_inputs(lang)
+        sets = (("jp-fhd", jp_dir, ()), (lang["target"], target_dir, needed))
+        for set_name, folder, _ in sets:
             print(f"  {set_name}: {folder}")
         # cheap checks of every set first, so a missing folder is reported before minutes of hashing
-        problems = [p for name, folder in sets for p in project.check_inputs(name, folder, manifest, False)]
+        problems = [p for name, folder, nd in sets
+                    for p in project.check_inputs(name, folder, manifest, False, needed=nd)]
         if not problems and not args.skip_checksums:
-            problems = [p for name, folder in sets for p in project.check_inputs(name, folder, manifest, True)]
+            problems = [p for name, folder, nd in sets
+                        for p in project.check_inputs(name, folder, manifest, True, needed=nd)]
         if problems:
             print("Input check failed:", file=sys.stderr)
             for p in problems:

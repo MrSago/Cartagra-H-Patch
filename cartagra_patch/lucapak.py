@@ -110,6 +110,7 @@ class LucaPak:
         self.flags = 0x06
         self.section_types = []  # [(type, element_size)] in header order
         self.meta_size = 0
+        self.name_prefix = b""  # bytes before the first name, e.g. b"PARTS/\0" (the engine looks up "PARTS/<name>")
         self.entries = []
 
     @classmethod
@@ -132,6 +133,7 @@ class LucaPak:
         index = pos + 4
         if pak.flags & 1 and count:
             pak.meta_size = (names_offset - (index + 8 * count)) // count
+        pak.name_prefix = raw[index + (8 + pak.meta_size) * count : names_offset]
 
         names = []
         p = names_offset
@@ -170,7 +172,7 @@ class LucaPak:
         pos = (0x22 + 6 * nsec + 3) & ~3
         index = pos + 4
         meta_start = index + 8 * count
-        names_offset = meta_start + self.meta_size * count
+        names_offset = meta_start + self.meta_size * count + len(self.name_prefix)
         names = b"".join(e.name.encode("utf-8") + b"\x00" for e in self.entries)
         sec_offsets = []
         p = names_offset + len(names)
@@ -187,6 +189,7 @@ class LucaPak:
         for k, ((stype, esize), soff) in enumerate(zip(self.section_types, sec_offsets)):
             struct.pack_into("<BBI", head, 0x22 + 6 * k, stype, esize, soff)
         struct.pack_into("<I", head, pos, names_offset)
+        head[names_offset - len(self.name_prefix) : names_offset] = self.name_prefix
         head[names_offset : names_offset + len(names)] = names
 
         body = bytearray()

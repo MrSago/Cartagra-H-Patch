@@ -3,15 +3,21 @@ Build pipeline: original files in -> patch files out.
 
 Inputs (read only):
   jp_dir      Japanese FHD release, files/ folder (input set "jp-fhd")
-  target_dir  the Steam build the patch is for, files/ folder (input set of the language)
+  target_dir  the Steam build the patch is for, files/ folder (input set of the language);
+              its CARTAGRA.exe is read from the folder above
   languages/<lang>/translation/*.tsv  translations of restored lines (optional)
+  languages/<lang>/interface.tsv      translation of the executable's interface strings (optional)
+  languages/<lang>/images/<archive>/<entry>.png  replacement pictures (optional; copies identical to
+                                                 the exported originals are skipped)
   definitions/restoration.json        what to restore (shared by all languages)
 
 Outputs:
   build/<lang>/staging/      archives while they are being written
   build/<lang>/translation/  the tables in the current format, one per restored scene (empty translation
                              where the language has none: a starting point for new tables)
-  dist/<lang>/               the finished patch: files/... + BUILD_INFO.txt
+  build/<lang>/interface.tsv the interface table in the current format (when the language has one)
+  dist/<lang>/               the finished patch: files/..., CARTAGRA.exe (when the interface is
+                             translated) + BUILD_INFO.txt
                              (replaced only after the whole build succeeded)
 """
 
@@ -20,12 +26,16 @@ import os
 import shutil
 import struct
 
+from . import cztool
+from . import exe_text
 from . import lucascript as ls
 from . import script_port as sp
+from .images import changed_images, language_images, reference_png
 from .lucapak import LucaPak, SEC_HASH, append_copy, append_missing, read_index, replace_from, xxh64
 from .project import BUILD_DIR, DIST_DIR, BuildError, sha256_file
 
 INFO_FILE = "BUILD_INFO.txt"
+EXE_NAME = "CARTAGRA.exe"
 
 
 class BuildOptions:
@@ -36,7 +46,7 @@ class BuildOptions:
         self.target_dir = target_dir
         self.voice = voice
         # True reproduces the build tested before 2026-10-26 (no start sequence, no _arflag update, new scripts
-        # after the metadata entries): tests only
+        # after the metadata entries, no interface translation): tests only
         self.reference = reference
         self.scenes = scenes  # None = all
         self.test_start = test_start
@@ -117,7 +127,7 @@ def run_build(opt, restoration, log=print):
     ported = list(restoration["censored_scenes"]["scenes"])
     removed = dict(restoration["removed_scenes"]["scenes"])
 
-    steps = 4 if opt.voice else 3
+    steps = 5 if opt.voice else 4
     log(f"[1/{steps}] Images")
     eventcg_out = os.path.join(files_out, "image", "EVENTCG.PAK")
     eventcg = _patch_archive(log, "EVENTCG.PAK", os.path.join(tg, "image", "EVENTCG.PAK"),
@@ -134,7 +144,7 @@ def run_build(opt, restoration, log=print):
         _patch_archive(log, "VOICE.PAK", os.path.join(tg, "voice", "VOICE.PAK"), os.path.join(jp, "voice", "VOICE0.PAK"),
                        voice_index_path, remap_parent=False)
 
-    log(f"[{steps - 1}/{steps}] Scenes")
+    log(f"[{steps - 2}/{steps}] Scenes")
     tg_script = LucaPak.read(os.path.join(tg, "SCRIPT.PAK"))
     jp_script = LucaPak.read(os.path.join(jp, "SCRIPT.PAK"))
     jp_by = {e.name: e for e in jp_script.entries}
@@ -229,8 +239,11 @@ def run_build(opt, restoration, log=print):
     log(f"  SCRIPT.PAK: {len(scenes)} scenes ({total['rus']} existing lines reused, {total['tsv']} translated, "
         f"{total['todo']} untranslated) ({os.path.getsize(script_out):,} bytes)")
 
+    log(f"[{steps - 1}/{steps}] Interface")
+    interface = (0, 0) if opt.reference else _build_interface(log, opt, work, staging, files_out)
+
     log(f"[{steps}/{steps}] Output")
-    _write_info(staging, opt, total, len(scenes))
+    _write_info(staging, opt, total, len(scenes), interface)
     if os.path.isdir(dist):
         if not os.path.isfile(os.path.join(dist, INFO_FILE)):
             raise BuildError(f"{dist} exists but was not made by this build (no {INFO_FILE}); move it away first")
@@ -265,7 +278,74 @@ def _restore_start_sequence(log, restoration, jp_by, tg_by, scenes):
     log(f"  {mv['from']:12s} start sequence: {mv['movie']} removed")
 
 
-def _write_info(staging, opt, total, nscenes):
+def _build_interface(log, opt, work, staging, files_out):
+    """Translate the executable's interface strings and replace images. Returns (strings translated, images)."""
+    lang = opt.language
+    try:
+        rows = exe_text.load_table(lang["interface_table"])
+    except ValueError as e:
+        raise BuildError(str(e)) from None
+    if rows:
+        exe_text.write_table(os.path.join(work, "interface.tsv"), rows)
+    translated = 0
+    if any(r["translation"] for r in rows):
+        exe = os.path.normpath(os.path.join(opt.target_dir, os.pardir, EXE_NAME))
+        if not os.path.isfile(exe):
+            raise BuildError(f"{exe} not found: copy {EXE_NAME} of the target release into the input set "
+                             f"(next to its files/ folder) to translate the interface")
+        with open(exe, "rb") as f:
+            original = f.read()
+        try:
+            data, translated, nrefs = exe_text.translate(original, rows)
+        except ValueError as e:
+            raise BuildError(f"{lang['interface_table']} does not fit {exe}:\n  " + str(e).replace("\n", "\n  ")) from None
+        os.makedirs(staging, exist_ok=True)
+        with open(os.path.join(staging, EXE_NAME), "wb") as f:
+            f.write(data)
+        log(f"  {EXE_NAME}: {translated} of {len(rows)} interface strings translated "
+            f"({nrefs} references redirected to section {exe_text.SECTION_NAME.decode()})")
+    else:
+        log(f"  {EXE_NAME}: not changed (" + ("no translations in interface.tsv)" if rows else "no interface.tsv)"))
+
+    images = 0
+    copies = sum(len(p) for p in language_images(lang).values())
+    for arch, pngs in changed_images(lang).items():
+        rel = os.path.join("image", *arch.split("/")) + ".PAK"
+        out = os.path.join(files_out, rel)
+        src = out if os.path.isfile(out) else os.path.join(opt.target_dir, rel)
+        if not os.path.isfile(src):
+            raise BuildError(f"replacement images in {os.path.join(lang['images_dir'], arch)}: "
+                             f"{os.path.join(opt.target_dir, rel)} not found (copy it into the input set)")
+        pak = LucaPak.read(src)
+        by = {e.name: e for e in pak.entries}
+        replaced = 0
+        for png in pngs:
+            name = os.path.splitext(os.path.basename(png))[0]
+            if name not in by or by[name].data[:2] != b"CZ":
+                raise BuildError(f"{png}: {arch}.PAK has no image named {name!r}")
+            hd = cztool.header(by[name].data)
+            try:
+                w, h, rgba = cztool.read_png(png)
+            except (ValueError, OSError) as e:
+                raise BuildError(str(e)) from None
+            if (w, h) != (hd["width"], hd["height"]):
+                raise BuildError(f"{png}: {w}x{h} pixels, the original is {hd['width']}x{hd['height']} "
+                                 f"(export the original with build.py --export-images and keep its size)")
+            if not reference_png(lang, arch, png) and cztool.decode(by[name].data)[1] == rgba:
+                continue  # no exported original to compare files with, but the pixels are unchanged
+            set_entry(by[name], cztool.encode_cz0(by[name].data, rgba))
+            replaced += 1
+        if not replaced:
+            continue
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        pak.write(out)
+        images += replaced
+        log(f"  {arch}.PAK: {replaced} pictures replaced ({os.path.getsize(out):,} bytes)")
+    log(f"  pictures: {images} replaced, {copies - images} unchanged copies of the originals skipped")
+    return translated, images
+
+
+def _write_info(staging, opt, total, nscenes, interface=(0, 0)):
     lang = opt.language
     lines = [
         f"Cartagra cut-content patch - language: {lang['code']} ({lang['name']})",
@@ -279,9 +359,12 @@ def _write_info(staging, opt, total, nscenes):
     if total["todo"]:
         lines.append(f"Untranslated restored lines: {total['todo']} (shown as Japanese placeholder text)")
     lines.append(f"Restored scenes: {nscenes}; voices: {'restored' if opt.voice else 'not included'}")
+    lines.append(f"Interface: {interface[0]} strings translated, {interface[1]} images replaced")
     lines += ["", "Copy each file to the same path inside the game folder (back up the originals first):", ""]
-    for dirpath, _, names in sorted(os.walk(os.path.join(staging, "files"))):
+    for dirpath, _, names in sorted(os.walk(staging)):
         for n in sorted(names):
+            if n == INFO_FILE:
+                continue
             path = os.path.join(dirpath, n)
             rel = os.path.relpath(path, staging).replace(os.sep, "/")
             lines.append(f"  {rel:24s} -> <game>/{rel}   sha256 {sha256_file(path)}")

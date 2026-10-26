@@ -1,0 +1,297 @@
+id	original	translation
+4effd0	Window	
+4f0350	Delete	
+4f0a60	Mouse	
+4f1654	Font	
+4f1678	Clear	
+4f16b0	All	
+4f5d18	Holy Slave	
+4f5d58	Nana's Delight	
+4f5d90	Disappearance	
+4f5dc0	Rin's Joy	
+4f5e00	Assailant	
+4f5e40	Hatsune's Joy	
+4f5e78	Powerless	
+4f5eb0	Takako's Joy	
+4f5ef0	Light in the Darkness	
+4f5f38	Toji's Love	
+4f5f78	Epilogue	
+4f5fc0	Grand Epilogue	
+4f5ff0	Tragedy	
+4f6020	Departure	
+4f6050	True End	
+4f6080	Getaway	
+4f60b0	Shadow of the Sea	
+4f60f8	Light of the Sea	
+4f6bb8	Play	
+4f75d0	English	
+4f75f0	Yes	
+4f7604	No	
+4f761c	Close	
+4f7678	Clear data (system data) was saved.	
+4f7708	Quick save data does not exist.	
+4f7780	Quick save cannot be used.	
+4f77f8	Quick load cannot be used.	
+4f7878	Would you like to jump to the selected message?	
+4f78f8	Do you wish to quick save ?	
+4f7958	Quick save is in progress.	
+4f79c8	System data save in progress...	
+4f7a80	$A1The system data is corrupted and can not be loaded. \n$A1Do you want to try again?	
+4f7c20	$A1The system data is corrupted, so changes cannot be saved.\n$A1Discard corrupted data and save?\n$A1(System data includes game progress, OPTIONS settings, etc.)	
+4f7df0	$A1The voice collection data is corrupted and can not be loaded. \n$A1Do you want to try again?	
+4f7f00	$A1The voice collection data is corrupted, so changes cannot be saved.\n$A1Discard corrupted data and save?	
+4f7fc8	Quick save data is corrupted and cannot be loaded.	
+4f8050	Do you wish to load this save?	
+4f80d0	The saved data is corrupted and cannot be loaded.	
+4f8198	A reading error occurred.\nThe file may be corrupted.	
+4f8220	Do you wish to save?	
+4f8268	Are you sure you wish to overwrite data?	
+4f82c8	$A1Data save in progress...	
+4f8338	$A1System data save in progress...	
+4f83c8	$A1Clear data (system data) save in progress...	
+4f8458	Save completed.	
+4f8490	Are you sure you wish to delete this save data?	
+4f84f0	This cannot be deleted.	
+4f8540	Return to the menu?	
+4f8598	End playback?	
+4f85e8	Return to the title screen?	
+4f8660	Would you like to restore this page to the default settings?	
+4f86f8	Switching fonts...	
+4f8760	Do you wish to jump to the next choice?	
+4f87e0	Do you wish to jump to the next chapter?	
+4f8880	Do you wish to jump to the next chapter or choice?	
+4f8908	Jumping to the next choice ...	
+4f8970	＿＿Jumping...＿＿	
+4f8a10	Stopped here because of unread text.	
+4f8aa8	Do you wish to jump to the previous choice?	
+4f8b38	Do you wish to jump to the beginning of this chapter?	
+4f8bd0	Do you wish to jump to the previous chapter?	
+4f8c58	Do you wish to jump to the beginning of the game?	
+4f8cf0	$A1There is no voice clip to save.	
+4f8d80	$A1The voice clip list is full.\n$A1You cannot save any more voice clips.	
+4f8e00	The playlist is full.	
+4f8e50	Save voice clips in any order you wish.	
+4f8ea8	Select the music for continuous playback.	
+4f8fb0	$A1Resetting will delete all voice clips saved to this page.$d$A1Do you wish to continue?$d$A1(The voice clips will also be deleted from playlists.)	
+4f90e0	$A1Resetting will delete all voice clips saved to this $dplaylist and the music. Do you wish to continue?	
+4f9180	Edit this playlist.	
+4f91a8	 Add Voice Clips 	
+4f91d0	Select Music	
+4f91ec	Reset	
+4f91f4	Cancel	
+4f9210	Back	
+4f9238	Go to link	
+4f928c	Latest	
+4f92d0	Defaults	
+4f9318	Sample Voice	
+4f9358	Controls	
+4f93a0	Languages	
+4f93d8	Play Voice	
+4f9410	Jump	
+4f9440	Voice Collection	
+4f9490	Message Log	
+4f94a4	Del.	
+4f94c8	To Playlist	
+4f94f0	To Voice Clip List	
+4f9518	Continuous Play	
+4f9530	Edit	
+4f9550	Show Preview	
+4f9580	Hide Preview	
+4f95b0	Hold (A) Continuous Play	
+4f95f0	Text preview.	
+4f9668	$A1Please select the languages you would like to use.	
+4f9750	Settings such as text speed are reflected.	
+4f9830	Changes to Sound API settings will be applied after exiting and restarting the game.	
+4f9900	There are no keywords.	
+4f9918	Next	
+4f9938	Playlist	
+4f9978	(You can put a voice clip here.)	
+4f99f8	(Cannot add more voice clips. You can only select music.)	
+4f9ac0	There is saved data that was automatically created \n$A(1)before the game crashed due to an error. \n$A(1)Would you like to load this saved data?	
+4f9be0	Press the N key to enter a note	
+4ff310	System Data	
+506830	Are you sure you wish to quit the game?	
+507bc0	Delete all saved data\nExit	
+507be0	$A1Do you delete all saved data including system data from the cloud \n$A1and return the game to the initial state? (Deleting it can not be undone)	
+507e18	Deleting save data ...	
+507e30	Deletion is completed.	
+508d20	Off	
+508d30	CARTAGRA Main Theme	
+508d70	Cool Breeze	
+508d88	Evening Calm	
+508da0	Eccentric Girl	
+508dc0	White Darkness	
+508de0	White Period	
+508e00	Snowblossom	
+508e20	Brilliance	
+508e30	Brilliant Sorrow	
+508e50	Everlasting	
+508e68	Endless Waves	
+508e88	Pursuit	
+508e98	Eating Away	
+508eb0	Unfathomable	
+508ec8	Demise	
+508ed8	Tears of the Moon	
+508f00	Lamentation	
+508f14	Truth	
+508f28	Sunny Spot	
+508f48	Red Mist	
+508f64	Warmth	
+508f80	Mad Bloom	
+508fa0	Murmurs	
+508fb0	Yukishiro	
+508fc8	Church of Senri	
+508fe8	Purgatory	
+509008	Eternity...	
+509028	Nostalgia	
+509040	Verdant	
+509050	Curse	
+509060	Piety	
+509078	Solitary	
+509098	Lunatic Tears	
+5090a8	Moon Dance	
+5090b4	Love	
+5090d0	Sayonara	
+5090f0	Dark of the Sea	
+509110	❝Rengoku❞	
+509138	❝LUNA❞	
+509160	❝Glass Moon❞	
+509180	❝Sea of Solitude❞	
+5092a0	$S(42)$A1$C(230,230,126)(This setting will also be applied for the Text1 ❝Language❞.)	
+509868	Basic	
+5098a4	Hide	
+5098b0	Touch Control	
+509908	Legacy	
+509910	Shortcut Menu	
+509980	Previously Read Only	
+5099ac	Skip	
+5099d8	Slow	
+5099e0	Fast	
+5099f0	Skip/Rewind Speed	
+509a30	Bottom	
+509a38	Center	
+509a48	Position of Choices	
+509ad0	Stop on New Message	
+509ae8	      No Stops      	
+509b20	Voice	
+509b48	Positioned at ❝Yes❞	
+509bc0	Positioned at ❝No❞	
+509bf0	Initial Cursor Position	
+509c10	Disable	
+509c18	Min	
+509c20	Mid	
+509c28	Max	
+509c30	Controller Rumble Function	
+509de0	Voice: If you select No Stops, sound will continue to play even if you advance the text during voice playback. (It stops if there is sound on the next message.)	
+509e90	Initial Cursor Position: Sets the initial position of the cursor when a Yes/No choice is available.	
+50a0f0	Controller Rumble Function: Plug in a controller to use the controller Rumble function.	
+50a150	Skip/Rewind Speed: Use C and Z to set the controller's fast skip/rewind speed. Pressing CTRL will set it to maximum playback speed.	
+50a324	Items	
+50a32c	Touch	
+50a34c	Rewind	
+50a3a8	Jump (Forward)	
+50a3b8	Jump (Backward)	
+50a4f0	Drag in the message window to Skip.\nAuto skip by swiping (stop by tapping).	
+50a540	Drag in the message window to Rewind.\nAuto rewind by swiping (stop by tapping).	
+50a780	Swipe outside the message window jumps to next choice/chapter, or the end of previously read text.	
+50a7f0	Swipe outside the message window to jump to previous choice/chapter.	
+50aa10	Swipe outside the message window to jump to the start of the next chapter or the end of previously read text.	
+50aa80	Swipe outside the message window to jump to the previous chapter.	
+50ac70	Swipe outside the message window to jump to the start of the next choice or to the latest previously read message.	
+50acf0	Swipe outside the message window to jump to the previous choice.	
+50adf8	Orange	
+50ae00	Yellow	
+50ae0c	Text1	
+50ae40	Language	
+50ae50	Gothic1	
+50ae68	Gothic2	
+50ae88	Gothic3	
+50aea8	Mincho	
+50aebc	Modern	
+50af1c	Solid	
+50af70	Window Transparency	
+50af98	Only Choices	
+50afe8	On	
+50b008	Previously Read Text	
+50b040	Color of	
+50b04c	Green	
+50b064	Blue	
+50b06c	Purple	
+50b078	Red	
+50b0a0	Read Text Color	
+50b0b0	Wait Time Per Character: In Auto Mode, this sets the wait time until the next message is displayed based on the number of characters in text.	
+50b3d0	Base Wait Time: You can set a Base Wait Time to add to ❝Wait Time Per Character❞.	
+50b458	Text2	
+50b460	Text Speed	
+50b4b8	0 sec/char	
+50b4c8	0.1 sec/char	
+50b4e8	Wait Time Per Character	
+50b530	0 sec	
+50b540	1 sec	
+50b550	2 sec	
+50b56c	3 sec	
+50b590	Base Wait Time	
+50b5a0	Sound	
+50b5e8	Master Volume	
+50b60c	Videos	
+50b638	SFX	
+50b680	System Sounds	
+50b6b8	Kozuki Yura	
+50b6f8	keyboard	
+50b748	While Pressed	
+50b758	Start/Stop	
+50b7b0	C (Skip)	
+50b7c0	Z (Rewind)	
+50b818	  Disable  	
+50b828	Quick Save	
+50b898	Quick Load	
+50b8a8	Switch Language	
+50b928	Up Arrow	
+50b990	Hide Window	
+50ba00	System Menu	
+50ba10	Right Click	
+50ba30	Left+Right Click	
+50ba88	Mouse Wheel Button	
+50baa0	Rewind Once	
+50bb00	Wheel Up	
+50bb10	Forward Once	
+50bb70	Wheel Down	
+50bb80	Jump and Switch Pages	
+50bc10	Return/Proceed Button	
+50bc28	Enable	
+50bc38	Gestures	
+50bcc8	Dialog and Choices	
+50bce0	Snap Pointer	
+50be50	Gestures: Moving the cursor while holding the left button works the same way as Touch controls.	
+50beb0	Left+Right Click: Hold left button then right click to switch between languages (English/Simplified Chinese/Japanese).	
+50c0a8	Game Ver. 	
+50c0cc	System	
+50c138	Full Screen	
+50c158	Screen Mode	
+50c164	Auto	
+50c1b0	Window Size	
+50c450	Changing the setting to ❝Auto❞ will open the window at a scale based on the Windows ❝Display❞ setting.\nChanging ❝%%❞ will scale the display, with the default resolution being %d×%d pixels.\n (Scale cannot be increased beyond the maximum resolution of your display.)	
+50c570	Change the quality of the in﹣game video.\nIf the video does not play properly, choose ❝Low Resolution❞.	
+50d468	Feb.	
+50d470	Jan.	
+50d478	Apr.	
+50d480	Mar.	
+50d488	Jun.	
+50d490	May	
+50d494	Aug.	
+50d49c	Jul.	
+50d4a4	Oct.	
+50d4ac	Sept.	
+50d4b4	Dec.	
+50d4bc	Nov.	
+50d930	Please select the items you would like to use.	
+50df20	Mute	
+50e830	This is a work of fiction. \nAny resemblance to actual persons, living or dead, or actual events is purely coincidental.\nThe content of this game is not intended to encourage or represent actual criminal activities.\nPlease play responsibly.	
+50f620	Saved voice to No. %02d in ❝%s❞.	
+50f680	Unable to save. The ❝%s❞ voice clip list is full.	
+50fa30	Delete No. %02d?	
+50fb58	Saved to No. %02d.	
+50fb70	Delete No. %02d from the playlist?	
+50fca8	$A1Delete No. %02d?$d(It will also be deleted from playlists.)	
+50fd10	$A1There is already data saved to No. %02d.$d$A1Overwrite this data?$d$A1(If the file is overwritten, playlists will also change.)	
+50fd98	Save to No. %02d?	

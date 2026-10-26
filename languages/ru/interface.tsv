@@ -1,0 +1,297 @@
+id	original	translation
+4effd0	Window	Окно
+4f0350	Delete	Удалить
+4f0a60	Mouse	Мышь
+4f1654	Font	Шрифт
+4f1678	Clear	
+4f16b0	All	Всё
+4f5d18	Holy Slave	Святая рабыня
+4f5d58	Nana's Delight	Наслаждение Наны
+4f5d90	Disappearance	Исчезновение
+4f5dc0	Rin's Joy	Счастье Рин
+4f5e00	Assailant	Нападавший
+4f5e40	Hatsune's Joy	Счастье Хацуне
+4f5e78	Powerless	Бессилие
+4f5eb0	Takako's Joy	Счастье Такако
+4f5ef0	Light in the Darkness	Свет во тьме
+4f5f38	Toji's Love	Любовь Тоджи
+4f5f78	Epilogue	Эпилог
+4f5fc0	Grand Epilogue	Главный эпилог
+4f5ff0	Tragedy	Трагедия
+4f6020	Departure	В путь
+4f6050	True End	Истинная концовка
+4f6080	Getaway	Бегство
+4f60b0	Shadow of the Sea	Тень моря
+4f60f8	Light of the Sea	Свет моря
+4f6bb8	Play	Просмотр
+4f75d0	English	Русский
+4f75f0	Yes	Да
+4f7604	No	Нет
+4f761c	Close	Закрыть
+4f7678	Clear data (system data) was saved.	Данные о прохождении (системные данные) сохранены.
+4f7708	Quick save data does not exist.	Быстрого сохранения нет.
+4f7780	Quick save cannot be used.	Быстрое сохранение недоступно.
+4f77f8	Quick load cannot be used.	Быстрая загрузка недоступна.
+4f7878	Would you like to jump to the selected message?	Перейти к выбранной реплике?
+4f78f8	Do you wish to quick save ?	Сделать быстрое сохранение?
+4f7958	Quick save is in progress.	Выполняется быстрое сохранение.
+4f79c8	System data save in progress...	Сохранение системных данных...
+4f7a80	$A1The system data is corrupted and can not be loaded. \n$A1Do you want to try again?	$A1Системные данные повреждены, загрузить их невозможно. \n$A1Повторить попытку?
+4f7c20	$A1The system data is corrupted, so changes cannot be saved.\n$A1Discard corrupted data and save?\n$A1(System data includes game progress, OPTIONS settings, etc.)	$A1Системные данные повреждены, сохранить изменения невозможно.\n$A1Удалить повреждённые данные и сохранить?\n$A1(Системные данные включают прогресс игры, настройки и т. д.)
+4f7df0	$A1The voice collection data is corrupted and can not be loaded. \n$A1Do you want to try again?	$A1Данные коллекции голосов повреждены, загрузить их невозможно. \n$A1Повторить попытку?
+4f7f00	$A1The voice collection data is corrupted, so changes cannot be saved.\n$A1Discard corrupted data and save?	$A1Данные коллекции голосов повреждены, сохранить изменения невозможно.\n$A1Удалить повреждённые данные и сохранить?
+4f7fc8	Quick save data is corrupted and cannot be loaded.	Быстрое сохранение повреждено, загрузить его невозможно.
+4f8050	Do you wish to load this save?	Загрузить это сохранение?
+4f80d0	The saved data is corrupted and cannot be loaded.	Сохранение повреждено, загрузить его невозможно.
+4f8198	A reading error occurred.\nThe file may be corrupted.	Ошибка чтения.\nВозможно, файл повреждён.
+4f8220	Do you wish to save?	Сохранить?
+4f8268	Are you sure you wish to overwrite data?	Перезаписать сохранение?
+4f82c8	$A1Data save in progress...	$A1Сохранение...
+4f8338	$A1System data save in progress...	$A1Сохранение системных данных...
+4f83c8	$A1Clear data (system data) save in progress...	$A1Сохранение данных о прохождении (системных данных)...
+4f8458	Save completed.	Сохранение завершено.
+4f8490	Are you sure you wish to delete this save data?	Удалить это сохранение?
+4f84f0	This cannot be deleted.	Удалить невозможно.
+4f8540	Return to the menu?	Вернуться в меню?
+4f8598	End playback?	Завершить просмотр сцены?
+4f85e8	Return to the title screen?	Вернуться на титульный экран?
+4f8660	Would you like to restore this page to the default settings?	Вернуть настройки этой страницы по умолчанию?
+4f86f8	Switching fonts...	Смена шрифта...
+4f8760	Do you wish to jump to the next choice?	Перейти к следующему выбору?
+4f87e0	Do you wish to jump to the next chapter?	Перейти к следующей главе?
+4f8880	Do you wish to jump to the next chapter or choice?	Перейти к следующей главе или выбору?
+4f8908	Jumping to the next choice ...	Переход к следующему выбору...
+4f8970	＿＿Jumping...＿＿	＿＿Переход...＿＿
+4f8a10	Stopped here because of unread text.	Переход остановлен: дальше непрочитанный текст.
+4f8aa8	Do you wish to jump to the previous choice?	Перейти к предыдущему выбору?
+4f8b38	Do you wish to jump to the beginning of this chapter?	Перейти к началу этой главы?
+4f8bd0	Do you wish to jump to the previous chapter?	Перейти к предыдущей главе?
+4f8c58	Do you wish to jump to the beginning of the game?	Перейти к началу игры?
+4f8cf0	$A1There is no voice clip to save.	$A1Здесь нет голоса, который можно сохранить.
+4f8d80	$A1The voice clip list is full.\n$A1You cannot save any more voice clips.	$A1Список голосов заполнен.\n$A1Больше сохранить нельзя.
+4f8e00	The playlist is full.	Плейлист заполнен.
+4f8e50	Save voice clips in any order you wish.	Добавляйте голоса в нужном порядке.
+4f8ea8	Select the music for continuous playback.	Выберите музыку для непрерывного воспроизведения.
+4f8fb0	$A1Resetting will delete all voice clips saved to this page.$d$A1Do you wish to continue?$d$A1(The voice clips will also be deleted from playlists.)	$A1Все голоса на этой странице будут удалены.$d$A1Продолжить?$d$A1(Они также будут удалены из плейлистов.)
+4f90e0	$A1Resetting will delete all voice clips saved to this $dplaylist and the music. Do you wish to continue?	$A1Все голоса и музыка этого плейлиста $dбудут удалены. Продолжить?
+4f9180	Edit this playlist.	Изменить этот плейлист.
+4f91a8	 Add Voice Clips 	 Добавить голоса 
+4f91d0	Select Music	Выбрать музыку
+4f91ec	Reset	Сброс
+4f91f4	Cancel	Отмена
+4f9210	Back	Назад
+4f9238	Go to link	Перейти
+4f928c	Latest	К последнему
+4f92d0	Defaults	По умолчанию
+4f9318	Sample Voice	Образец голоса
+4f9358	Controls	Управление
+4f93a0	Languages	Языки
+4f93d8	Play Voice	Повтор голоса
+4f9410	Jump	Переход
+4f9440	Voice Collection	Коллекция голосов
+4f9490	Message Log	Журнал
+4f94a4	Del.	Удал.
+4f94c8	To Playlist	В плейлист
+4f94f0	To Voice Clip List	К списку голосов
+4f9518	Continuous Play	Подряд
+4f9530	Edit	Изменить
+4f9550	Show Preview	Показать превью
+4f9580	Hide Preview	Скрыть превью
+4f95b0	Hold (A) Continuous Play	Удерживать (A): подряд
+4f95f0	Text preview.	Предпросмотр текста.
+4f9668	$A1Please select the languages you would like to use.	$A1Отметьте языки, между которыми нужно переключаться.
+4f9750	Settings such as text speed are reflected.	Здесь видны настройки скорости текста и другие.
+4f9830	Changes to Sound API settings will be applied after exiting and restarting the game.	Смена звукового API вступит в силу после перезапуска игры.
+4f9900	There are no keywords.	Терминов нет.
+4f9918	Next	Далее
+4f9938	Playlist	Плейлист
+4f9978	(You can put a voice clip here.)	(Сюда можно добавить голос.)
+4f99f8	(Cannot add more voice clips. You can only select music.)	(Больше голосов добавить нельзя. Можно только выбрать музыку.)
+4f9ac0	There is saved data that was automatically created \n$A(1)before the game crashed due to an error. \n$A(1)Would you like to load this saved data?	Найдено автосохранение, созданное \n$A(1)перед аварийным завершением игры. \n$A(1)Загрузить его?
+4f9be0	Press the N key to enter a note	Нажмите N, чтобы добавить заметку
+4ff310	System Data	Системные данные
+506830	Are you sure you wish to quit the game?	Выйти из игры?
+507bc0	Delete all saved data\nExit	Удалить все сохранения\nВыход
+507be0	$A1Do you delete all saved data including system data from the cloud \n$A1and return the game to the initial state? (Deleting it can not be undone)	$A1Удалить все сохранения, включая системные данные, из облака \n$A1и вернуть игру в исходное состояние? (Удаление необратимо)
+507e18	Deleting save data ...	Удаление сохранений...
+507e30	Deletion is completed.	Удаление завершено.
+508d20	Off	Выкл.
+508d30	CARTAGRA Main Theme	Главная тема CARTAGRA
+508d70	Cool Breeze	Прохладный ветер
+508d88	Evening Calm	Вечерний штиль
+508da0	Eccentric Girl	Странная девушка
+508dc0	White Darkness	Белая тьма
+508de0	White Period	Белое время
+508e00	Snowblossom	Подснежник
+508e20	Brilliance	Блеск
+508e30	Brilliant Sorrow	Блистательная печаль
+508e50	Everlasting	Вечное
+508e68	Endless Waves	Бесконечные волны
+508e88	Pursuit	Погоня
+508e98	Eating Away	Разъедание
+508eb0	Unfathomable	Бездна
+508ec8	Demise	Конец
+508ed8	Tears of the Moon	Слёзы луны
+508f00	Lamentation	Плач
+508f14	Truth	Истина
+508f28	Sunny Spot	Солнечное место
+508f48	Red Mist	Красный туман
+508f64	Warmth	Тепло
+508f80	Mad Bloom	Безумное цветение
+508fa0	Murmurs	Шёпот
+508fb0	Yukishiro	Юкиширо
+508fc8	Church of Senri	Церковь Сенри
+508fe8	Purgatory	Чистилище
+509008	Eternity...	Вечность...
+509028	Nostalgia	Ностальгия
+509040	Verdant	Зелень
+509050	Curse	Проклятие
+509060	Piety	Благочестие
+509078	Solitary	Одиночество
+509098	Lunatic Tears	Безумные слёзы
+5090a8	Moon Dance	Лунный танец
+5090b4	Love	Любовь
+5090d0	Sayonara	Прощай
+5090f0	Dark of the Sea	Тьма моря
+509110	❝Rengoku❞	❝Ренгоку❞
+509138	❝LUNA❞	
+509160	❝Glass Moon❞	❝Стеклянная луна❞
+509180	❝Sea of Solitude❞	❝Море одиночества❞
+5092a0	$S(42)$A1$C(230,230,126)(This setting will also be applied for the Text1 ❝Language❞.)	$S(42)$A1$C(230,230,126)(Эта настройка также меняет ❝Язык❞ на вкладке ❝Текст 1❞.)
+509868	Basic	Основное
+5098a4	Hide	Скрыть
+5098b0	Touch Control	Сенсорное
+509908	Legacy	Классическое
+509910	Shortcut Menu	Меню быстрого доступа
+509980	Previously Read Only	Только прочитанное
+5099ac	Skip	Пропуск
+5099d8	Slow	
+5099e0	Fast	
+5099f0	Skip/Rewind Speed	Скорость перемотки
+509a30	Bottom	Внизу
+509a38	Center	По центру
+509a48	Position of Choices	Положение выборов
+509ad0	Stop on New Message	Прерывать
+509ae8	      No Stops      	    Не прерывать    
+509b20	Voice	Голос
+509b48	Positioned at ❝Yes❞	На ❝Да❞
+509bc0	Positioned at ❝No❞	На ❝Нет❞
+509bf0	Initial Cursor Position	Курсор в диалогах
+509c10	Disable	Выкл.
+509c18	Min	Слабо
+509c20	Mid	Средне
+509c28	Max	Сильно
+509c30	Controller Rumble Function	Вибрация геймпада
+509de0	Voice: If you select No Stops, sound will continue to play even if you advance the text during voice playback. (It stops if there is sound on the next message.)	Голос: при ❝Не прерывать❞ озвучка продолжает звучать, даже если перейти к следующей реплике. (Она прерывается, если у следующей реплики есть своя озвучка.)
+509e90	Initial Cursor Position: Sets the initial position of the cursor when a Yes/No choice is available.	Курсор в диалогах: начальное положение курсора в окнах с выбором ❝Да/Нет❞.
+50a0f0	Controller Rumble Function: Plug in a controller to use the controller Rumble function.	Вибрация геймпада: подключите геймпад, чтобы использовать вибрацию.
+50a150	Skip/Rewind Speed: Use C and Z to set the controller's fast skip/rewind speed. Pressing CTRL will set it to maximum playback speed.	Скорость перемотки: скорость перемотки вперёд и назад клавишами C и Z и с геймпада. С клавишей CTRL перемотка всегда максимальная.
+50a324	Items	Функции
+50a32c	Touch	Касание
+50a34c	Rewind	Назад
+50a3a8	Jump (Forward)	Переход (вперёд)
+50a3b8	Jump (Backward)	Переход (назад)
+50a4f0	Drag in the message window to Skip.\nAuto skip by swiping (stop by tapping).	Проведите в окне текста, чтобы пропускать текст.\nСмахните для автопропуска (касание останавливает).
+50a540	Drag in the message window to Rewind.\nAuto rewind by swiping (stop by tapping).	Проведите в окне текста, чтобы перематывать назад.\nСмахните для автоперемотки (касание останавливает).
+50a780	Swipe outside the message window jumps to next choice/chapter, or the end of previously read text.	Смахивание вне окна текста: переход к следующему выбору или главе либо к концу прочитанного.
+50a7f0	Swipe outside the message window to jump to previous choice/chapter.	Смахивание вне окна текста: переход к предыдущему выбору или главе.
+50aa10	Swipe outside the message window to jump to the start of the next chapter or the end of previously read text.	Смахивание вне окна текста: переход к началу следующей главы или к концу прочитанного.
+50aa80	Swipe outside the message window to jump to the previous chapter.	Смахивание вне окна текста: переход к предыдущей главе.
+50ac70	Swipe outside the message window to jump to the start of the next choice or to the latest previously read message.	Смахивание вне окна текста: переход к следующему выбору или к последней прочитанной реплике.
+50acf0	Swipe outside the message window to jump to the previous choice.	Смахивание вне окна текста: переход к предыдущему выбору.
+50adf8	Orange	
+50ae00	Yellow	
+50ae0c	Text1	Текст 1
+50ae40	Language	Язык
+50ae50	Gothic1	Гротеск 1
+50ae68	Gothic2	Гротеск 2
+50ae88	Gothic3	Гротеск 3
+50aea8	Mincho	Антиква
+50aebc	Modern	Модерн
+50af1c	Solid	
+50af70	Window Transparency	Прозрачность окна
+50af98	Only Choices	Только выборы
+50afe8	On	Вкл.
+50b008	Previously Read Text	прочитанного текста
+50b040	Color of	Цвет
+50b04c	Green	
+50b064	Blue	
+50b06c	Purple	
+50b078	Red	
+50b0a0	Read Text Color	Цвет прочитанного
+50b0b0	Wait Time Per Character: In Auto Mode, this sets the wait time until the next message is displayed based on the number of characters in text.	Ожидание на символ: в режиме авто задаёт паузу перед следующей репликой в зависимости от числа символов в тексте.
+50b3d0	Base Wait Time: You can set a Base Wait Time to add to ❝Wait Time Per Character❞.	Базовое ожидание: постоянная пауза, которая добавляется к ❝Ожиданию на символ❞.
+50b458	Text2	Текст 2
+50b460	Text Speed	Скорость текста
+50b4b8	0 sec/char	
+50b4c8	0.1 sec/char	
+50b4e8	Wait Time Per Character	Ожидание на символ
+50b530	0 sec	
+50b540	1 sec	
+50b550	2 sec	
+50b56c	3 sec	
+50b590	Base Wait Time	Базовое ожидание
+50b5a0	Sound	Звук
+50b5e8	Master Volume	Общая громкость
+50b60c	Videos	Видео
+50b638	SFX	Эффекты
+50b680	System Sounds	Системные звуки
+50b6b8	Kozuki Yura	Козуки Юра
+50b6f8	keyboard	Клавиатура
+50b748	While Pressed	Удержание
+50b758	Start/Stop	Вкл./выкл.
+50b7b0	C (Skip)	C (вперёд)
+50b7c0	Z (Rewind)	Z (назад)
+50b818	  Disable  	  Выкл.  
+50b828	Quick Save	Быстрое сохранение
+50b898	Quick Load	Быстр. загрузка
+50b8a8	Switch Language	Смена языка
+50b928	Up Arrow	Стрелка вверх
+50b990	Hide Window	Скрыть окно
+50ba00	System Menu	Системное меню
+50ba10	Right Click	Правая кнопка
+50ba30	Left+Right Click	Левая + правая кнопки
+50ba88	Mouse Wheel Button	Нажатие колёсика
+50baa0	Rewind Once	На одну назад
+50bb00	Wheel Up	Колёсико вверх
+50bb10	Forward Once	На одну вперёд
+50bb70	Wheel Down	Колёсико вниз
+50bb80	Jump and Switch Pages	Переход и смена страниц
+50bc10	Return/Proceed Button	Кнопки ❝Назад/Вперёд❞
+50bc28	Enable	Вкл.
+50bc38	Gestures	Жесты
+50bcc8	Dialog and Choices	Диалоги и выборы
+50bce0	Snap Pointer	Притягивать курсор
+50be50	Gestures: Moving the cursor while holding the left button works the same way as Touch controls.	Жесты: движение мыши с зажатой левой кнопкой работает так же, как сенсорное управление.
+50beb0	Left+Right Click: Hold left button then right click to switch between languages (English/Simplified Chinese/Japanese).	Левая + правая кнопки: зажмите левую кнопку и нажмите правую, чтобы сменить язык (русский/упрощённый китайский/японский).
+50c0a8	Game Ver. 	
+50c0cc	System	Система
+50c138	Full Screen	Полный экран
+50c158	Screen Mode	Режим экрана
+50c164	Auto	
+50c1b0	Window Size	Размер окна
+50c450	Changing the setting to ❝Auto❞ will open the window at a scale based on the Windows ❝Display❞ setting.\nChanging ❝%%❞ will scale the display, with the default resolution being %d×%d pixels.\n (Scale cannot be increased beyond the maximum resolution of your display.)	Значение ❝Авто❞ открывает окно в масштабе, заданном в параметрах дисплея Windows.\nЗначения ❝%%❞ масштабируют изображение; исходное разрешение %d×%d пикселей.\n (Масштаб не может превышать максимальное разрешение вашего дисплея.)
+50c570	Change the quality of the in﹣game video.\nIf the video does not play properly, choose ❝Low Resolution❞.	Качество видео в игре.\nЕсли видео воспроизводится неправильно, выберите ❝Низкое разрешение❞.
+50d468	Feb.	фев.
+50d470	Jan.	янв.
+50d478	Apr.	апр.
+50d480	Mar.	мар.
+50d488	Jun.	июн.
+50d490	May	мая
+50d494	Aug.	авг.
+50d49c	Jul.	июл.
+50d4a4	Oct.	окт.
+50d4ac	Sept.	сен.
+50d4b4	Dec.	дек.
+50d4bc	Nov.	нояб.
+50d930	Please select the items you would like to use.	Отметьте функции, которые нужно использовать.
+50df20	Mute	Без звука
+50e830	This is a work of fiction. \nAny resemblance to actual persons, living or dead, or actual events is purely coincidental.\nThe content of this game is not intended to encourage or represent actual criminal activities.\nPlease play responsibly.	Это художественное произведение. \nЛюбое сходство с реальными людьми и событиями случайно.\nСодержание игры не призывает к совершению преступлений.\nИграйте ответственно.
+50f620	Saved voice to No. %02d in ❝%s❞.	Голос сохранён в ячейку %02d списка ❝%s❞.
+50f680	Unable to save. The ❝%s❞ voice clip list is full.	Сохранить невозможно: список ❝%s❞ заполнен.
+50fa30	Delete No. %02d?	Удалить ячейку %02d?
+50fb58	Saved to No. %02d.	Сохранено в ячейку %02d.
+50fb70	Delete No. %02d from the playlist?	Удалить ячейку %02d из плейлиста?
+50fca8	$A1Delete No. %02d?$d(It will also be deleted from playlists.)	$A1Удалить ячейку %02d?$d(Она будет удалена и из плейлистов.)
+50fd10	$A1There is already data saved to No. %02d.$d$A1Overwrite this data?$d$A1(If the file is overwritten, playlists will also change.)	$A1В ячейке %02d уже есть данные.$d$A1Перезаписать их?$d$A1(При перезаписи изменятся и плейлисты.)
+50fd98	Save to No. %02d?	Сохранить в ячейку %02d?

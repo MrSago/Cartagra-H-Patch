@@ -1,0 +1,30 @@
+archive	entry	shows
+SYSCG	title_menu1	Title menu (START, LOAD, OPTIONS, MANUAL, GALLERY, MUSIC, MOVIES, ENDINGS, VIDEOS, EXTRAS, BACK, EXIT), normal
+SYSCG	title_menu2	Title menu, second state
+SYSCG	title_menu3	Title menu, third state
+SYSCG	title_extras	EXTRAS heading
+SYSCG	extra_title	Extras headings (GALLERY, MUSIC, MOVIES, ENDINGS, VIDEOS)
+SYSCG	extra_pt2	Completion Rate / Total Completion Rate
+SYSCG	extra_pt	Page numbers with "No."
+SYSCG	graphic_pt	Gallery page numbers with "No."
+SYSCG	title_logo01_en	Logo with the tagline
+SYSCG	title_logo02_en	Logo with the tagline, second variant
+SYSCG	title_bg02_en	Title background with logo and tagline
+resident/PARTS	options_tab_en	Options tabs (Basic, Text1, Text2, Sound, Voice, Keyboard, Mouse, Touch, System)
+resident/PARTS	options_tab_en_oc	Options tabs, second variant
+resident/PARTS	CONFIG_TAB1_en	OPTIONS heading and tabs (other layout)
+resident/PARTS	system_menu_icon	System menu (SAVE, LOAD, OPTIONS, TITLE, Q.SAVE, Q.LOAD, MANUAL, BACK, EXIT)
+resident/PARTS	legacy_pt_minimum	In-game buttons (MENU, REWIND, SKIP, AUTO, BACK, NEXT, SAVE, LOAD, OPTIONS, VOICE, CLOSE, LOG, EXIT)
+resident/PARTS	legacy_pt_full1	In-game buttons, full layout (REWIND, SKIP, AUTO, SAVE, LOAD, OPTIONS, EXIT)
+resident/PARTS	save_bg_text_1280	SAVE label of the save screen (1280 wide)
+resident/PARTS	save_bg_text_1920	SAVE label of the save screen (1920 wide)
+resident/PARTS	load_bg_text_1280	LOAD label of the load screen (1280 wide)
+resident/PARTS	load_bg_text_1920	LOAD label of the load screen (1920 wide)
+resident/PARTS	INDICATOR_ICON_1280_en	Jump indicators (1280 wide)
+resident/PARTS	INDICATOR_ICON_1920_en	Jump indicators (1920 wide)
+resident/PARTS	pc_button_1280	Key names (1280 wide)
+resident/PARTS	pc_button_1920	Key names (1920 wide)
+resident/PARTS	pc_button_black_1280	Key names, dark (1280 wide)
+resident/PARTS	pc_button_black_1920	Key names, dark (1920 wide)
+MANUAL	en_*	Manual pages and keyboard help
+MANUAL_DECK	deck_en_*	Manual pages and help for Steam Deck

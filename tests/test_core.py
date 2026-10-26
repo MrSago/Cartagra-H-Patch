@@ -14,11 +14,13 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from cartagra_patch import cztool  # noqa: E402
+from cartagra_patch import exe_text  # noqa: E402
 from cartagra_patch import lucascript as ls  # noqa: E402
 from cartagra_patch import project  # noqa: E402
 from cartagra_patch import script_port as sp  # noqa: E402
@@ -65,6 +67,43 @@ def lzw_encode(data):
     return codes
 
 
+def make_exe():
+    """
+    A minimal PE32+ file: .text loads "Hello" with lea rcx,[rip+d] (twice) and "Other" once, .data holds a
+    relocated pointer to "%d items", .reloc lists that pointer.
+    """
+    base = 0x140000000
+    secs = [(b".text", 0x1000, 0x400), (b".rdata", 0x2000, 0x600), (b".data", 0x3000, 0x800), (b".reloc", 0x4000, 0xA00)]
+    data = bytearray(0xC00)
+    data[0:2] = b"MZ"
+    struct.pack_into("<I", data, 0x3C, 0x40)
+    data[0x40:0x44] = b"PE\0\0"
+    struct.pack_into("<HHIIIHH", data, 0x44, 0x8664, len(secs), 0, 0, 0, 0xF0, 0x22)
+    opt = 0x58
+    struct.pack_into("<H", data, opt, 0x20B)
+    struct.pack_into("<Q", data, opt + 24, base)
+    struct.pack_into("<IIIII", data, opt + 32, 0x1000, 0x200, 0, 0, 0)
+    struct.pack_into("<II", data, opt + 56, 0x5000, 0x400)
+    struct.pack_into("<I", data, opt + 108, 16)
+    struct.pack_into("<II", data, opt + 112 + 5 * 8, 0x4000, 12)
+    for k, (name, va, raw) in enumerate(secs):
+        struct.pack_into("<8sIIIIIIHHI", data, opt + 0xF0 + 40 * k, name, 0x200, va, 0x200, raw, 0, 0, 0, 0, 0x40000040)
+
+    def lea(at_rva, target_rva):
+        off = at_rva - 0x1000 + 0x400
+        data[off : off + 7] = b"\x48\x8d\x0d" + struct.pack("<i", target_rva - (at_rva + 7))
+
+    lea(0x1000, 0x2000)
+    lea(0x1010, 0x2000)
+    lea(0x1020, 0x2020)
+    data[0x600:0x606] = b"Hello\0"
+    data[0x610:0x619] = b"%d items\0"
+    data[0x620:0x626] = b"Other\0"
+    struct.pack_into("<Q", data, 0x800, base + 0x2010)
+    struct.pack_into("<IIHH", data, 0xA00, 0x3000, 12, 10 << 12, 0)
+    return bytes(data)
+
+
 def make_cz4(rgba, w, h, blocks=2):
     """CZ4 file for an RGBA image: delta-coded RGB plane + alpha plane, LZW in `blocks` blocks."""
     band = -(-h // 3)
@@ -104,6 +143,21 @@ class LucaPakTests(unittest.TestCase):
             self.assertEqual(back.build(), raw)
             self.assertEqual([e.name for e in back.entries], ["a", "b", "c"])
             self.assertEqual(back.id_of("b"), 1002)
+
+    def test_name_prefix_is_kept(self):
+        """PARTS.PAK has "PARTS/\\0" before the first name; the engine looks pictures up as PARTS/<name>."""
+        pak = make_pak(["a", "b"])
+        pak.name_prefix = b"PARTS/\0"
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "PARTS.PAK")
+            pak.write(path)
+            with open(path, "rb") as f:
+                raw = f.read()
+            back = LucaPak.read(path)
+            self.assertEqual(back.name_prefix, b"PARTS/\0")
+            self.assertEqual([e.name for e in back.entries], ["a", "b"])
+            self.assertEqual(back.build(), raw)
+            self.assertIn(b"PARTS/\0a\0b\0", raw)
 
     def test_append_keeps_ids_and_remaps_parent(self):
         base, donor = make_pak(["x", "a"]), make_pak(["a", "b", "b_k1"])
@@ -248,6 +302,242 @@ class CzToolTests(unittest.TestCase):
         self.assertEqual(out[12:16], bytes([10, 20, 30, 255]))
 
 
+class CzReplacementTests(unittest.TestCase):
+    def test_cz0_roundtrip_keeps_placement(self):
+        w, h = 4, 3
+        original = make_cz4(bytes(4 * w * h), w, h)
+        original = original[:0x10] + struct.pack("<HH", 5, 7) + original[0x14:]
+        rgba = bytes(range(4 * w * h))
+        cz0 = cztool.encode_cz0(original, rgba)
+        hd, out = cztool.decode(cz0)
+        self.assertEqual((hd["magic"], hd["header_length"], hd["width"], hd["height"], hd["bits"]),
+                         (b"CZ0\x00", 64, w, h, 32))
+        self.assertEqual((hd["x"], hd["y"]), (5, 7))
+        self.assertEqual(out, rgba)
+        with self.assertRaises(ValueError):
+            cztool.encode_cz0(original, rgba[:-4])
+
+    def test_read_png_filters_and_color_types(self):
+        def png(w, h, ctype, rows, filters, extra=b""):
+            def chunk(t, d):
+                return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
+            ch = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}[ctype]
+            raw, prev = b"", bytes(w * ch)
+            for row, ft in zip(rows, filters):
+                enc = bytearray(row)
+                for i in range(len(row)):
+                    a = row[i - ch] if i >= ch else 0
+                    b, c = prev[i], prev[i - ch] if i >= ch else 0
+                    pred = {0: 0, 1: a, 2: b, 3: (a + b) // 2,
+                            4: a if abs(b - c) <= abs(a - c) and abs(b - c) <= abs(a + b - 2 * c)
+                            else b if abs(a - c) <= abs(a + b - 2 * c) else c}[ft]
+                    enc[i] = (row[i] - pred) & 0xFF
+                raw += bytes([ft]) + bytes(enc)
+                prev = row
+            return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, ctype, 0, 0, 0)) + extra
+                    + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+
+        rnd = random.Random(2)
+        w, h = 3, 5
+        rgba = [bytes(rnd.randrange(256) for _ in range(4 * w)) for _ in range(h)]
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "t.png")
+            with open(path, "wb") as f:
+                f.write(png(w, h, 6, rgba, [0, 1, 2, 3, 4]))
+            self.assertEqual(cztool.read_png(path), (w, h, b"".join(rgba)))
+            rgb = [bytes(v for i, v in enumerate(r) if i % 4 != 3) for r in rgba]
+            with open(path, "wb") as f:
+                f.write(png(w, h, 2, rgb, [4, 3, 2, 1, 0]))
+            self.assertEqual(cztool.read_png(path)[2],
+                             b"".join(bytes(r[i : i + 3]) + b"\xff" for r in rgb for i in range(0, 3 * w, 3)))
+            plte = struct.pack(">I", 6) + b"PLTE" + b"\x01\x02\x03\x04\x05\x06"
+            plte += struct.pack(">I", zlib.crc32(b"PLTE\x01\x02\x03\x04\x05\x06") & 0xFFFFFFFF)
+            trns = struct.pack(">I", 1) + b"tRNS\x80" + struct.pack(">I", zlib.crc32(b"tRNS\x80") & 0xFFFFFFFF)
+            with open(path, "wb") as f:
+                f.write(png(2, 1, 3, [bytes([0, 1])], [0], plte + trns))
+            self.assertEqual(cztool.read_png(path), (2, 1, b"\x01\x02\x03\x80\x04\x05\x06\xff"))
+            cztool.write_png(path, b"".join(rgba), w, h)
+            self.assertEqual(cztool.read_png(path), (w, h, b"".join(rgba)))
+            with open(path, "wb") as f:
+                f.write(b"GIF89a")
+            with self.assertRaises(ValueError):
+                cztool.read_png(path)
+
+    def test_build_replaces_images(self):
+        from cartagra_patch import pipeline
+        w, h = 2, 2
+        pak = make_pak([])
+        pak.entries = [Entry("menu", make_cz4(bytes(4 * w * h), w, h), b"", {SEC_PARENT: b"\0\0", SEC_HASH: b"\0" * 8}),
+                       Entry("other", b"CZ4\0rest", b"", {SEC_PARENT: b"\0\0", SEC_HASH: b"\0" * 8})]
+        with tempfile.TemporaryDirectory() as d:
+            target = os.path.join(d, "target", "files")
+            os.makedirs(os.path.join(target, "image", "resident"))
+            pak.write(os.path.join(target, "image", "resident", "PARTS.PAK"))
+            images = os.path.join(d, "lang", "images", "resident", "PARTS")
+            os.makedirs(images)
+            rgba = bytes(range(16))
+            cztool.write_png(os.path.join(images, "menu.png"), rgba, w, h)
+            lang = {"code": "xx", "interface_table": os.path.join(d, "lang", "interface.tsv"),
+                    "images_dir": os.path.join(d, "lang", "images")}
+            self.assertEqual(project.needed_optional_inputs(lang), ["image/resident/PARTS.PAK"])
+            opt = pipeline.BuildOptions(lang, "jp", target)
+            staging = os.path.join(d, "staging")
+            result = pipeline._build_interface(quiet, opt, d, staging, os.path.join(staging, "files"))
+            self.assertEqual(result, (0, 1))
+            out = LucaPak.read(os.path.join(staging, "files", "image", "resident", "PARTS.PAK"))
+            self.assertEqual(cztool.decode(out.entries[0].data)[1], rgba)
+            self.assertEqual(out.entries[0].sections[SEC_HASH], xxh64_pure(out.entries[0].data))
+            self.assertEqual(out.entries[1].data, b"CZ4\0rest")
+            self.assertFalse(os.path.exists(os.path.join(staging, "CARTAGRA.exe")))
+            cztool.write_png(os.path.join(images, "menu.png"), rgba + rgba, w, 2 * h)
+            with self.assertRaisesRegex(project.BuildError, "2x4 pixels, the original is 2x2"):
+                pipeline._build_interface(quiet, opt, d, staging, os.path.join(staging, "files"))
+            os.rename(os.path.join(images, "menu.png"), os.path.join(images, "missing.png"))
+            with self.assertRaisesRegex(project.BuildError, "no image named 'missing'"):
+                pipeline._build_interface(quiet, opt, d, staging, os.path.join(staging, "files"))
+
+    def test_export_copy_and_unchanged_copies(self):
+        from cartagra_patch import images, pipeline
+        w, h = 2, 2
+        pak = make_pak([])
+        pics = {"menu": bytes(range(16)), "title_a": bytes(range(16, 32)), "title_b": bytes(range(32, 48))}
+        pak.entries = [Entry(n, make_cz4(px, w, h), b"", {SEC_PARENT: b"\0\0", SEC_HASH: b"\0" * 8}) for n, px in pics.items()]
+        pak.entries.append(Entry("tone", b"\0\3\6\t", b"", {SEC_PARENT: b"\0\0", SEC_HASH: b"\0" * 8}))
+        with tempfile.TemporaryDirectory() as d:
+            target = os.path.join(d, "target", "files")
+            os.makedirs(os.path.join(target, "image", "resident"))
+            pak.write(os.path.join(target, "image", "resident", "PARTS.PAK"))
+            original = os.path.join(d, "_original_steam", "en")
+            os.makedirs(original)
+            with open(os.path.join(original, "images.tsv"), "w", encoding="utf-8") as f:
+                f.write("archive\tentry\tshows\nresident/PARTS\tmenu\tmenu\nresident/PARTS\ttitle_*\ttitles\n")
+            rows = images.load_list(os.path.join(original, "images.tsv"))
+            self.assertEqual(images.export(target, rows, os.path.join(original, "images"), log=quiet), 3)
+            lang = {"code": "xx", "interface_table": os.path.join(d, "xx", "interface.tsv"),
+                    "images_dir": os.path.join(d, "xx", "images"), "interface_original_dir": original}
+            self.assertEqual(images.copy_missing(os.path.join(original, "images"), lang["images_dir"]), 3)
+            copies = os.path.join(lang["images_dir"], "resident", "PARTS")
+            self.assertEqual(sorted(os.listdir(copies)), ["menu.png", "title_a.png", "title_b.png"])
+            self.assertEqual(cztool.read_png(os.path.join(copies, "menu.png"))[2], pics["menu"])
+
+            # unedited copies: nothing needed, nothing written
+            self.assertEqual(images.changed_images(lang), {})
+            self.assertEqual(project.needed_optional_inputs(lang), [])
+            opt = pipeline.BuildOptions(lang, "jp", target)
+            staging = os.path.join(d, "staging")
+            out = os.path.join(staging, "files", "image", "resident", "PARTS.PAK")
+            self.assertEqual(pipeline._build_interface(quiet, opt, d, staging, os.path.join(staging, "files")), (0, 0))
+            self.assertFalse(os.path.exists(out))
+
+            # an edited copy is kept by copy_missing and replaced by the build
+            edited = bytes(255 - b for b in pics["menu"])
+            cztool.write_png(os.path.join(copies, "menu.png"), edited, w, h)
+            self.assertEqual(images.copy_missing(os.path.join(original, "images"), lang["images_dir"]), 0)
+            self.assertEqual(list(images.changed_images(lang)), ["resident/PARTS"])
+            self.assertEqual(project.needed_optional_inputs(lang), ["image/resident/PARTS.PAK"])
+            self.assertEqual(pipeline._build_interface(quiet, opt, d, staging, os.path.join(staging, "files")), (0, 1))
+            by = {e.name: e for e in LucaPak.read(out).entries}
+            self.assertEqual(cztool.decode(by["menu"].data)[1], edited)
+            self.assertEqual(by["title_a"].data[:4], b"CZ4\0")
+
+            # without exported originals the build compares pixels: unchanged copies are still skipped
+            os.remove(out)
+            shutil.rmtree(os.path.join(original, "images"))
+            self.assertEqual(pipeline._build_interface(quiet, opt, d, staging, os.path.join(staging, "files")), (0, 1))
+
+            with self.assertRaisesRegex(ValueError, "no picture matching 'nothing_\\*'"):
+                images.export(target, [("resident/PARTS", "nothing_*", "")], os.path.join(d, "x"), log=quiet)
+
+
+class ExeTextTests(unittest.TestCase):
+    def rows(self, **translations):
+        originals = {0x2000: "Hello", 0x2010: "%d items", 0x2020: "Other"}
+        return [dict(id=k, original=v, translation=translations.get(v.split()[-1], "")) for k, v in originals.items()]
+
+    def test_references_and_translate(self):
+        exe = make_exe()
+        pe = exe_text.PE(exe)
+        refs = pe.references()
+        self.assertEqual(sorted(k for k, _ in refs[0x2000]), ["lea", "lea"])
+        self.assertEqual([k for k, _ in refs[0x2010]], ["abs"])
+        self.assertEqual([s[1] for s in exe_text.list_strings(exe)], ["Hello", "%d items", "Other"])
+        out, n, nrefs = exe_text.translate(exe, self.rows(Hello="Привет, мир", items="%d предметов"))
+        self.assertEqual((n, nrefs), (2, 3))
+        new = exe_text.PE(out)
+        sec = new.section(exe_text.SECTION_NAME)
+        self.assertEqual((sec.va, new.nsec), (0x5000, 5))
+        self.assertEqual(struct.unpack_from("<I", out, new.opt + 56)[0], 0x6000)  # SizeOfImage
+        for code_rva, text in ((0x1000, "Привет, мир"), (0x1010, "Привет, мир"), (0x1020, "Other")):
+            off = new.rva_to_off(code_rva) + 3
+            target = code_rva + 7 + struct.unpack_from("<i", out, off)[0]
+            self.assertEqual(new.cstr(target).decode(), text)
+        pointer = struct.unpack_from("<Q", out, 0x800)[0] - new.base
+        self.assertEqual(new.cstr(pointer).decode(), "%d предметов")
+        self.assertEqual(new.cstr(0x2000), b"Hello")  # originals stay
+        self.assertEqual(len(out) % 0x200, 0)
+        with self.assertRaisesRegex(ValueError, "already has a .uitext section"):
+            exe_text.translate(out, self.rows(Hello="x"))
+        self.assertEqual(exe_text.translate(exe, self.rows()), (exe, 0, 0))
+
+    def test_check_table_problems(self):
+        pe = exe_text.PE(make_exe())
+        rows = self.rows(items="%s предметов")
+        rows.append(dict(id=0x2000, original="Hello", translation=""))
+        rows.append(dict(id=0x2001, original="Hi", translation=""))
+        rows.append(dict(id=0x9000, original="x", translation=""))
+        problems = exe_text.check_table(pe, rows)
+        self.assertEqual(len(problems), 4)
+        self.assertIn("placeholders ['%s'] differ", problems[0])
+        self.assertIn("duplicate id", problems[1])
+        self.assertIn("the table 'Hi'", problems[2])
+        self.assertIn("not inside the executable", problems[3])
+
+    def test_picture_list_fits_the_target_archives(self):
+        """Every row of _original_steam/en/images.tsv names pictures of the Russian release, when its archives are present."""
+        import fnmatch
+        from cartagra_patch import images
+        from cartagra_patch.lucapak import read_index
+        files = os.path.join(project.INPUTS_DIR, "ru-steam", "files")
+        rows = images.load_list(os.path.join(project.LANGUAGES_DIR, "_original_steam", "en", "images.tsv"))
+        for archive in sorted({r[0] for r in rows}):
+            path = images.archive_path(files, archive)
+            if not os.path.isfile(path):
+                continue
+            names = read_index(path)[1]
+            for _, pattern, _ in (r for r in rows if r[0] == archive):
+                self.assertTrue(fnmatch.filter(names, pattern), f"{archive}: {pattern}")
+
+    def test_table_roundtrip(self):
+        rows = [dict(id=0x50af98, original="Only Choices", translation="Только\tвыборы\n")]
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "interface.tsv")
+            exe_text.write_table(path, rows)
+            with open(path, encoding="utf-8") as f:
+                self.assertEqual(f.read(), "id\toriginal\ttranslation\n50af98\tOnly Choices\tТолько\\tвыборы\\n\n")
+            self.assertEqual([{k: r[k] for k in ("id", "original", "translation")} for r in exe_text.load_table(path)],
+                             rows)
+            self.assertEqual(exe_text.load_table(os.path.join(d, "absent.tsv")), [])
+
+    def test_language_tables_fit_the_target_exe(self):
+        """Every interface table (and the original one) matches the Russian release's exe, when it is present."""
+        exe = os.path.join(project.INPUTS_DIR, "ru-steam", "CARTAGRA.exe")
+        if not os.path.isfile(exe):
+            self.skipTest("inputs/ru-steam/CARTAGRA.exe is not present")
+        with open(exe, "rb") as f:
+            pe = exe_text.PE(f.read())
+        refs = pe.references()
+        original = exe_text.load_table(os.path.join(project.LANGUAGES_DIR, "_original_steam", "en", "interface.tsv"))
+        self.assertTrue(original and not any(r["translation"] for r in original))
+        ru = exe_text.load_table(project.load_language("ru")["interface_table"])
+        self.assertEqual([r["id"] for r in ru], [r["id"] for r in original])
+        # kept in English: slider labels drawn with a small font that has no Cyrillic, and a song title
+        small_font = {"0 sec", "0 sec/char", "0.1 sec/char", "1 sec", "2 sec", "3 sec", "Auto", "Blue", "Clear", "Fast",
+                      "Game Ver. ", "Green", "Orange", "Purple", "Red", "Slow", "Solid", "Yellow", "❝LUNA❞"}
+        self.assertEqual({r["original"] for r in ru if not r["translation"]}, small_font)
+        self.assertEqual(exe_text.check_table(pe, original, refs), [])
+        self.assertEqual(exe_text.check_table(pe, ru, refs), [])
+
+
 class TsvTests(unittest.TestCase):
     def test_roundtrip_and_legacy_columns(self):
         rows = [dict(row=0, kind="msg", voice="12", jp="a\tb", translation="x\ny", source="tsv"),
@@ -278,6 +568,9 @@ class ProjectTests(unittest.TestCase):
             cfg = project.load_language(code)
             self.assertIn(cfg["target"], manifest["sets"])
             self.assertIn(cfg["status"], project.STATUSES)
+            if cfg["interface_original_dir"]:
+                for name in ("interface.tsv", "images.tsv"):
+                    self.assertTrue(os.path.isfile(os.path.join(cfg["interface_original_dir"], name)), name)
         self.assertNotEqual(langs["en"]["status"], "complete")
         with self.assertRaises(project.BuildError):
             project.load_language("xx")
@@ -325,6 +618,25 @@ class ProjectTests(unittest.TestCase):
             self.assertTrue(any("SHA-256 differs" in p for p in problems))
             self.assertEqual(len(project.check_inputs("s", d, manifest, verify_checksums=False, log=quiet)), 2)
 
+    def test_check_inputs_optional_files(self):
+        files = {"../GAME.exe": {"use": "data", "optional": True, "needed_for": "interface translation"}}
+        manifest = {"sets": {"s": {"description": "test", "files": files}}}
+        with tempfile.TemporaryDirectory() as d:
+            folder = os.path.join(d, "files")
+            os.makedirs(folder)
+            self.assertEqual(project.check_inputs("s", folder, manifest, log=quiet), [])
+            problems = project.check_inputs("s", folder, manifest, log=quiet, needed=["../GAME.exe"])
+            self.assertEqual(len(problems), 1)
+            self.assertIn("needed for interface translation", problems[0])
+            with open(os.path.join(d, "GAME.exe"), "wb") as f:
+                f.write(b"MZ" + bytes(100))
+            files["../GAME.exe"]["sha256"] = project.sha256_file(os.path.join(d, "GAME.exe"))
+            self.assertEqual(project.check_inputs("s", folder, manifest, log=quiet, needed=["../GAME.exe"]), [])
+            with open(os.path.join(d, "GAME.exe"), "wb") as f:
+                f.write(b"XX" + bytes(100))
+            problems = project.check_inputs("s", folder, manifest, log=quiet)
+            self.assertEqual(problems, [f"{os.path.join(d, 'GAME.exe')}: not a Windows executable"])
+
 
 class CliTests(unittest.TestCase):
     def run_cli(self, *args):
@@ -364,8 +676,9 @@ def tree_hashes(folder):
 class IntegrationTests(unittest.TestCase):
     """
     Builds ru from the real inputs into a temporary folder (not the project's build/ or dist/):
-    once as the reference build (no tables, start sequence or _arflag update; must equal the reference),
-    twice normally (must be identical; New Game must call the prologue; _arflag must match every script).
+    once as the reference build (no tables, start sequence, _arflag update or interface; must equal the reference),
+    twice normally (must be identical; New Game must call the prologue; _arflag must match every script;
+    CARTAGRA.exe is written when the interface is translated).
     """
 
     def test_ru_build_is_reproducible_and_leaves_inputs_alone(self):
@@ -398,6 +711,8 @@ class IntegrationTests(unittest.TestCase):
         files = [{k[len("files/"):]: v for k, v in h.items() if k.startswith("files/")} for h in hashes]
         self.assertEqual(files[0], REFERENCE_RU)
         self.assertEqual(hashes[1], hashes[2])
+        self.assertNotIn("CARTAGRA.exe", hashes[0])
+        self.assertEqual("CARTAGRA.exe" in hashes[1], project.interface_translated(lang))
         self.assertEqual(sp.calls_to(script["0000-op1"], "0000-op0_HD"), 1)
         self.assertEqual(sp.calls_to(script["0308-02-00"], "0000-op0_HD"), 0)
         self.assertEqual(sp.rebuild_arflag(script["_arflag"], [e.name for e in entries], entries)[1], [])  # every script has a correct record

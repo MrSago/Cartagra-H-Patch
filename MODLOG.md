@@ -103,3 +103,21 @@ Single-player VN, no anti-cheat.
 - User: chosen options are still not colored (JP screenshot: chosen option in purple). Native Steam scene `0207-06-00` (slot 16, both options chosen before, bits `03`): text white too, so not a patch issue. Cause: Options > Text1 > "Color of Previously Read Text" was Off. "On" colors all read text (both options lavender); "Only Choices" colors only chosen options. Verified in restored `0217-01-05h`: chose option 2, came back: option 2 lavender, option 1 white. Chosen-option bits: bit first+k = option k chosen.
 - My earlier "darker box = chosen marker" reading was wrong; corrected in TECHNICAL_NOTES.
 - Afterwards: saves restored from `backup/saves/GSE_4290390_2026-10-26_before_ingame_test/` (so the option is Off again), normal build installed.
+
+## 2026-10-26 session 8: interface translation (branch `translate-interface`)
+
+- Branch `translate-interface` from `fix-read-text-and-choices`. User: base everything on the Steam (Russian) release only; its interface differs from the JP release.
+- Interface text is in `CARTAGRA.exe` (.rdata, UTF-8, JP/ZC/EN sets; RU shows EN). Each string loaded by `lea r64,[rip+disp32]`; month names via a relocated pointer table. The RU translators already added `.rtransl` (58 prologue strings) the same way.
+- New `exe_text`: references (lea + DIR64 relocs), table `languages/<lang>/interface.tsv` (`id original translation`), checks (original matches, referenced, printf placeholders), adds `.uitext` and redirects references. Optional inputs `../CARTAGRA.exe`, `image/resident/PARTS.PAK` in `inputs.json`.
+- Candidates: EN strings loaded within 768 code bytes of a JP string + months; curated to 289, then +7 after the game test (strings merged with the Dear ImGui ones: Window, Delete, Mouse, Font, Clear, All; Game Ver.). BGM/SE/MOVIE excluded (script command names).
+- In game: notice, Options (all pages), exit/back-to-title dialogs in Russian. Font has no `«»` -> `❝❞`. Small font (slider labels, version) has no Cyrillic -> 17 labels kept English. Shortened two strings. Final: 277 of 296 translated, 307 references.
+- Images: list of English interface pictures documented; replacement PNGs in `languages/<lang>/images/<archive>/<entry>.png`, written as CZ0 (`cztool.encode_cz0`, PNG reader, `cztool export`). First in-game test crashed on Options: `lucapak` dropped the `PARTS/\0` name prefix of `resident/PARTS.PAK`. Fixed (`name_prefix`); recoloured options tabs then shown in game.
+- Game folder during the tests: exe and PARTS.PAK swapped, user's config backed up to `backup/saves/GSE_4290390_2026-10-26_before_ui_test/`; afterwards original exe and PARTS.PAK back, save folder restored from that backup (test data in `..._after_ui_test/`). Originals also in `backup/orig/CARTAGRA.exe`, `backup/orig/image/resident/PARTS.PAK`.
+- Tests: 31 (incl. integration) pass. The exact `dist/ru` exe was not run in game; it differs from the tested one only by leaving `Game Ver. ` untranslated.
+
+## 2026-10-26 session 9: originals split by source, picture export
+
+- `languages/_original/` renamed to `languages/_original_jp/` (scene tables, JP release text). The Steam interface moved to `languages/_original_steam/en/`: `interface.tsv`, new `images.tsv` (pictures with text; patterns for the manual pages). `_original_steam/jp/` not made (not needed yet).
+- New `images` module and `build.py --language <code> --export-images`: exports the 134 listed pictures from the input set to `_original_steam/en/images/` (9 s, 22 MB) and copies missing ones to `languages/<code>/images/`. Done for `ru`. PNGs stay out of git (`.gitignore`).
+- New optional `language.json` key `interface_original` (`_original_steam/en` for ru and en). The build replaces only pictures that differ from the exported originals (byte comparison; pixel comparison without them) and writes an archive only when one changed; optional input archives are needed only for changed pictures. `ru` build: 134 unchanged copies skipped, output unchanged.
+- Picture list checked by eye: added `title_bg02_en`, `extra_pt`, `graphic_pt`; dropped `CAUTION_TEXT` (background only; the notice text is in the exe), `title_copyright*`, `title_menu1_bar`, `legacy_pt_full2`, `MWIN_BASE03_EN` (no text).

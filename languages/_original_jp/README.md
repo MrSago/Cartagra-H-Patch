@@ -1,4 +1,4 @@
-# Original translation tables
+# Original scene tables (Japanese release)
 
 The 24 tables as first generated (commit `2265978`, 2026-10-26, folder `translation/`), with all Russian text removed. They are a starting point for translating the restored scenes into another language. The build never reads this folder; it is not a language (no `language.json`).
 
@@ -22,3 +22,5 @@ To start a new language:
 4. Build. Rows left empty show an identical line of that language's release if there is one, otherwise the Japanese text.
 
 Keep the engine markup: `@Name@` speaker prefix, `$d` choice separator, `$[base$/ruby$]` ruby, `\n` for a line break and `\t` for a tab.
+
+The Steam release's interface (table and pictures) is in [../_original_steam/](../_original_steam/README.md).
