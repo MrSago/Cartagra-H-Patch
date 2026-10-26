@@ -1,0 +1,191 @@
+{
+  "_comment": "Files each input set must contain, relative to inputs/<set>/files/. use=data: contents are copied or patched (SHA-256 verified when known); use=index: only the archive's entry names are read (entry count checked when known).",
+  "sets": {
+    "jp-fhd": {
+      "description": "Japanese FHD release v1.1 (the game's files/ folder; the Chinese fan patch does not change these files). Source of the cut content.",
+      "files": {
+        "SCRIPT.PAK": {
+          "use": "data",
+          "size": 2066360,
+          "entries": 277,
+          "sha256": "12c70afa7a5aabf9e02212be553ed64cb0d11a2fc169e20b958283b6c4f33b8e"
+        },
+        "image/BGCG.PAK": {
+          "use": "index",
+          "size": 477325312,
+          "entries": 175,
+          "sha256": "e57b9e428948b84c9e459ef406315044f9c181798e8e93a7e19004192d1674ca"
+        },
+        "image/CHARCG.PAK": {
+          "use": "index",
+          "size": 376979456,
+          "entries": 892,
+          "sha256": "8fc9fcdd5da9c4e8ad5abba3be5a28bd64198bd08420e2bd2e886c74e4fe4892"
+        },
+        "image/EVENTCG.PAK": {
+          "use": "data",
+          "size": 551507968,
+          "entries": 364,
+          "sha256": "761a7785e79235abee14451323552e5e2e496620d17887b98d90b7cbb0b55913"
+        },
+        "image/EVENTCG_SAVE.PAK": {
+          "use": "index",
+          "size": 15243264,
+          "entries": 130,
+          "sha256": "45ba06735a8ea46fd9adf824c825ec39de28c07649d3568c4bb84f9c1b084b33"
+        },
+        "image/OTHCG.PAK": {
+          "use": "data",
+          "size": 345741312,
+          "entries": 436,
+          "sha256": "a5169c8a6fa3dd7d90b61374eef8899acfbad3aacc2b3b2c66c2fae0eb3f8f10"
+        },
+        "image/PARTS.PAK": {
+          "use": "index",
+          "size": 9873408,
+          "entries": 116,
+          "sha256": "422b802f7b4e2ed7bd93fda2f76ed6867260cc325bbe88776cffdb91568d2ca1"
+        },
+        "image/SYSCG.PAK": {
+          "use": "index",
+          "size": 33372160,
+          "entries": 46,
+          "sha256": "8b2efe7d23359ddcd75e8af3bb82f0b1ebbd2a614df07f39a66af53164608f86"
+        },
+        "image/SYSCG2.PAK": {
+          "use": "index",
+          "size": 11309056,
+          "entries": 254,
+          "sha256": "ce91cc50ad8394ed303308ec326705349256db4be8f411efe3022a6ba372a69c"
+        },
+        "voice/SYSVOICE.PAK": {
+          "use": "index",
+          "size": 13971456,
+          "entries": 19,
+          "sha256": "977790be282ff060d106977c62d489470602a5366cfc5bb30e55a7797830ad99"
+        },
+        "voice/VOICE0.PAK": {
+          "use": "data",
+          "size": 809744384,
+          "entries": 10080,
+          "sha256": "10f151273e353d047be5d444d8d9ad85cdae01f62fc034b08ac5bbf4e45c3382"
+        },
+        "voice/VOICE1.PAK": {
+          "use": "index",
+          "size": 436224,
+          "entries": 3,
+          "sha256": "91cf26283ad6637413df3e3595d02f52f108fafb5e7679013f0d3689a08b77be"
+        }
+      }
+    },
+    "ru-steam": {
+      "description": "Russian 2026 release by Innocence translations and The Hounds of God (Steam build, Russian text in the English slot). Unmodified original files - NOT files from an installation the patch was already copied into.",
+      "files": {
+        "SCRIPT.PAK": {
+          "use": "data",
+          "size": 5210545,
+          "entries": 274,
+          "sha256": "c33dd504c40a120fbfa1a9b76a2cebd6857ab5407446cb4505e50cd4903014ef"
+        },
+        "image/BGCG.PAK": {
+          "use": "index",
+          "size": 487849984,
+          "entries": 179,
+          "sha256": "d5184b0881dd4528cf3f98077f250edbb2e5d3fb35b87459f66368ba82808c91"
+        },
+        "image/CHARCG.PAK": {
+          "use": "index",
+          "size": 381585408,
+          "entries": 976,
+          "sha256": "8d5581a90683c8399a00cfbea1ee1d544135e4cc125c8a2ce278b0d19d6352c6"
+        },
+        "image/EVENTCG.PAK": {
+          "use": "data",
+          "size": 371456000,
+          "entries": 223,
+          "sha256": "8f2a9b21300cb3fa3d6510a82e0680e38cda9f8a8d33ec688e0b312479c56385"
+        },
+        "image/MANUAL.PAK": {
+          "use": "index",
+          "size": 16785408,
+          "entries": 113,
+          "sha256": "5fa8836a33a8c0edb5f96f86a17b81990bf834956915999899cf04cfd4abf351"
+        },
+        "image/MANUAL_DECK.PAK": {
+          "use": "index",
+          "size": 12732416,
+          "entries": 103,
+          "sha256": "9fd1c10be96562852828ad0bf0f3e94fbba857c33812c9477d3eec59bca628b1"
+        },
+        "image/OTHCG.PAK": {
+          "use": "data",
+          "size": 339937280,
+          "entries": 362,
+          "sha256": "477b30ba8f36e5e98e990440adef093a5715530c4516dd370ba7ac991596ea5c"
+        },
+        "image/SYSCG.PAK": {
+          "use": "index",
+          "size": 55107584,
+          "entries": 49,
+          "sha256": "7988ed02a763f8e2e6562f157f320b8afbfc4511cba3e0ef4b9d96ef8a40a48b"
+        },
+        "image/SYSCG2.PAK": {
+          "use": "index",
+          "size": 8034304,
+          "entries": 185,
+          "sha256": "6999d6aa5d14ad134f2fea93f95de4f53ea6475427e0870d2e4398ab575e5f30"
+        },
+        "voice/SYSVOICE.PAK": {
+          "use": "index",
+          "size": 6934528,
+          "entries": 18,
+          "sha256": "41644feca5af6afb310c39aff212a32db161f7b673999b7d2daf873560ccc31f"
+        },
+        "voice/VOICE.PAK": {
+          "use": "data",
+          "size": 601276416,
+          "entries": 8183,
+          "sha256": "42e87d76474c8ae64407f56dc0deadf4fa70bc509bd3042320055e2f99def5ea"
+        }
+      }
+    },
+    "en-steam": {
+      "description": "English Steam release of CARTAGRA (app 4290390). Unmodified original files. Not available to the developers yet: checksums unknown, the build is untested.",
+      "files": {
+        "SCRIPT.PAK": {
+          "use": "data"
+        },
+        "image/BGCG.PAK": {
+          "use": "index"
+        },
+        "image/CHARCG.PAK": {
+          "use": "index"
+        },
+        "image/EVENTCG.PAK": {
+          "use": "data"
+        },
+        "image/MANUAL.PAK": {
+          "use": "index"
+        },
+        "image/MANUAL_DECK.PAK": {
+          "use": "index"
+        },
+        "image/OTHCG.PAK": {
+          "use": "data"
+        },
+        "image/SYSCG.PAK": {
+          "use": "index"
+        },
+        "image/SYSCG2.PAK": {
+          "use": "index"
+        },
+        "voice/SYSVOICE.PAK": {
+          "use": "index"
+        },
+        "voice/VOICE.PAK": {
+          "use": "data"
+        }
+      }
+    }
+  }
+}

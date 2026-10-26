@@ -1,0 +1,9 @@
+{
+  "code": "ru",
+  "name": "Russian",
+  "target": "ru-steam",
+  "target_description": "Russian 2026 release by Innocence translations and The Hounds of God (Steam build; the translators wrote Russian into the English text slot)",
+  "status": "incomplete",
+  "status_note": "Restoration is built and tested in game. Restored scenes still show 3,970 untranslated lines as Japanese placeholder text.",
+  "placeholder": "Untranslated lines show the Japanese original (speaker names translated when known)."
+}

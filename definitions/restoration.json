@@ -1,0 +1,48 @@
+{
+  "_comment": "What the patch restores. Shared by all target languages; see TECHNICAL_NOTES.md (What Steam Censored, Censored Images).",
+  "censored_scenes": {
+    "_comment": "Scenes the Steam release censored by rewriting them: the JP scene is ported over the target's version.",
+    "scenes": [
+      "0207-13-01H", "0207-13-03H", "0208-13-01H", "0210-03-01h", "0210-12-01h",
+      "0210-99-02h", "0215-08-03h", "0215-10-02h", "0217-02-12h", "0220-02-06h",
+      "0220-02-12H", "0221-99-02h", "a1-2-3h", "a1-7-2h", "a2-3-4h", "a2-5-2h",
+      "0210-10-00", "0214-05-00", "0215-03-00", "0215-05-02"
+    ]
+  },
+  "removed_scenes": {
+    "_comment": "Scenes the Steam release removed: scene -> target script whose JUMP must lead into it (aligned with the JP version of that script).",
+    "scenes": {
+      "0216-04-03h": "0216-04-03",
+      "0216-05-03h": "0216-05-02",
+      "0217-01-05h": "0217-01-04",
+      "0217-99-04h": "0217-99-03"
+    }
+  },
+  "censored_images": {
+    "_comment": "Pictures the Steam release edited; the target scripts show them at the same points as the JP scripts, so the JP data replaces them in place (same resource ID).",
+    "EVENTCG": [
+      "e003", "e003k1", "e006", "e007", "e007k1", "e010", "e016", "e016k1", "e016k2",
+      "e035k1", "e035k2", "e036", "e036k1", "e039", "e045", "e046", "e051", "e053",
+      "e060", "e067", "eh001k1", "eh001k2", "eh012", "eh025", "eh029", "eh038k2",
+      "eh055", "eh082", "eh084", "eh084k1", "eh088k1", "eh092", "eh092k1", "ne008a", "ne010a"
+    ],
+    "OTHCG": [
+      "f001c", "f001e", "f001f", "f001fk1", "f008", "f008d", "f017a", "f017ak1",
+      "f022f", "f027c", "f027m", "f035", "f037ck6", "f037ck7", "f047", "f050"
+    ]
+  },
+  "split_images": {
+    "_comment": "Target slots holding a different (substitute) picture still shown by unported target scripts: the JP picture is appended under a new name and only ported scenes use it.",
+    "EVENTCG": {"e047": "e047_jp"}
+  },
+  "script_fixes": {
+    "_comment": "In-place fixes in unported target scripts where Steam changed how a censored picture is shown.",
+    "fixes": [
+      {"script": "0208-15-00", "kind": "retarget", "image": "e007k0", "new_image": "e007k1",
+       "why": "Steam inserted its own frame e007k0; JP shows e007k1 at that point"},
+      {"script": "0210-07-00", "kind": "move_y", "image": "e045", "old_y": -854.0, "new_y": -1080.0,
+       "why": "JP e045 is 2160 px tall (Steam 1934): scroll to its bottom like the JP script"}
+    ]
+  },
+  "new_game_script": "0000-op1"
+}

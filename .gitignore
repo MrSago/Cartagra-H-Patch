@@ -1,0 +1,40 @@
+# Never commit game data: the game is copyrighted. Everyone builds the patch from their own copies.
+
+# Original game files supplied locally
+inputs/
+# Intermediate build files and reports
+build/
+# Finished patch files (contain game data; rebuild with build.py)
+dist/
+# Local, untracked material: old tools and outputs, unpacked archives, the old git history (local/legacy2)
+local/
+# Outputs of older build scripts
+out/
+out_test/
+
+# Game files and anything extracted from them, wherever they are
+*.PAK
+*.pak
+*.Pak
+*_unpacked/
+*.exe
+*.dll
+*.webm
+*.mp4
+*.ogg
+*.wav
+*.png
+*.jpg
+*.bmp
+*.cz0
+*.cz1
+*.cz3
+*.cz4
+# Saves
+GSE Saves/
+PROTOTYPE/
+
+# Python caches and logs
+__pycache__/
+*.pyc
+*.log

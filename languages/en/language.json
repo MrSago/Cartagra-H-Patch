@@ -1,0 +1,9 @@
+{
+  "code": "en",
+  "name": "English",
+  "target": "en-steam",
+  "target_description": "English Steam release of CARTAGRA (app 4290390)",
+  "status": "untested",
+  "status_note": "Never built: the English Steam files were not available. The same restoration rules are expected to apply (same engine and script names) but nothing has been verified. Restored scenes would show Japanese placeholder text where no English line exists.",
+  "placeholder": "Untranslated lines show the Japanese original (speaker names translated when known)."
+}
