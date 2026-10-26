@@ -121,3 +121,11 @@ Single-player VN, no anti-cheat.
 - New `images` module and `build.py --language <code> --export-images`: exports the 134 listed pictures from the input set to `_original_steam/en/images/` (9 s, 22 MB) and copies missing ones to `languages/<code>/images/`. Done for `ru`. PNGs stay out of git (`.gitignore`).
 - New optional `language.json` key `interface_original` (`_original_steam/en` for ru and en). The build replaces only pictures that differ from the exported originals (byte comparison; pixel comparison without them) and writes an archive only when one changed; optional input archives are needed only for changed pictures. `ru` build: 134 unchanged copies skipped, output unchanged.
 - Picture list checked by eye: added `title_bg02_en`, `extra_pt`, `graphic_pt`; dropped `CAUTION_TEXT` (background only; the notice text is in the exe), `title_copyright*`, `title_menu1_bar`, `legacy_pt_full2`, `MWIN_BASE03_EN` (no text).
+
+## 2026-10-26 session 10: Russian interface text reviewed
+
+- `languages/ru/interface.tsv` reviewed line by line; 66 translations changed, no rows added. Every interface string the game itself uses is already in the table; what is left untranslated is either debug or log text, or the 18 small-font labels (no Cyrillic in that font) plus `❝LUNA❞` (the title is Latin in the original too).
+- Consistent terms: a voice clip is now «фраза» (not «голос»), and a choice option is «вариант» (Положение вариантов, Только варианты, Диалоги и варианты); Wait Time is «пауза» (Пауза на символ, Базовая пауза).
+- Clearer options: Hide → Скрыто, the rumble strength options are feminine (Слабая/Средняя/Сильная), While Pressed/Start/Stop → При удержании/Переключение, C/Z → пропуск/перемотка, Rewind/Forward Once → Шаг назад/вперёд, the read-text row → «Выделять прочитанное» (so it no longer repeats «Цвет прочитанного» on the next row), SFX → Звуковые эффекты.
+- Smoother dialog and hint wording (corrupted data, quick save, reset to defaults, touch hints, voice collection), several music titles corrected (Snowblossom, Brilliance, Unfathomable, Demise, Sunny Spot, White Period), Grand Epilogue → Финальный эпилог, Nov. → ноя.
+- Checked with `exe_text check` (0 problems) and the unit tests. Not checked in game: label widths of the longer strings (Звуковые эффекты, Положение вариантов, Удерж. (A): играть подряд).
