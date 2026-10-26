@@ -413,3 +413,81 @@ def final_jump(data):
         if ins.op == ls.OP_JUMP_SCRIPT:
             target = ls.read_str(ins.body, 0)[0].decode("cp932")
     return target
+
+
+# ---------------------------------------------------------------- start sequence
+# Steam moved the prologue and the opening movie from New Game to just before
+# part 2 and moved the Rengoku movie the other way (TECHNICAL_NOTES.md, "Start
+# Sequence"). Ops 20 (return) and 22 (call a script) exist only in the Steam build.
+
+OP_RETURN, OP_CALL, OP_MARKER, OP_MOVIE_RUS, OP_PAUSE_RUS = 20, 22, 25, 119, 72
+MOVIE_TAIL_OPS = (123, 1, OP_PAUSE_RUS)  # what follows a movie up to the next script JUMP
+
+
+def _str_at(ins, op, p=2):
+    """String argument at body[p] of an `op` instruction (None for other ops)."""
+    return ls.read_str(ins.body, p)[0].decode("cp932") if ins.op == op else None
+
+
+def _renumber_markers(instrs):
+    """Number the marker IDs (u16 0x8000 | n at body[0] of ops 25 and 119) 0, 1, 2... in script order, as JP does."""
+    n = 0
+    for ins in instrs:
+        if ins.op in (OP_MARKER, OP_MOVIE_RUS) and len(ins.body) >= 2 and ins.body[1] & 0x80:
+            ins.body = struct.pack("<H", 0x8000 | n) + ins.body[2:]
+            n += 1
+
+
+def calls_to(data, script):
+    """How many times a RUS script calls `script` (op 22)."""
+    return sum(1 for ins in ls.parse(data) if _str_at(ins, OP_CALL) == script)
+
+
+def insert_call(rus_data, script):
+    """Call `script` (op 22, which returns with op 20) right after the setup instructions (up to op 27)."""
+    instrs = ls.parse(rus_data)
+    if any(ins.op == OP_CALL for ins in instrs):
+        raise ValueError("the script already calls another script")
+    end = next(k for k, ins in enumerate(instrs) if ins.op == 27) + 1
+    body = struct.pack("<H", 0) + ls.make_str(script.encode("cp932")) + struct.pack("<I", 0)
+    call = ls.Instr(OP_CALL, 1, instrs[end].line or 0, body)
+    return ls.assemble(instrs[:end] + [call] + instrs[end:])
+
+
+def cut_movie(rus_data, movie):
+    """
+    Remove the block that plays `movie` from a RUS script: the movie instruction and
+    what follows it up to the next script JUMP (MOVIE_TAIL_OPS only).
+    Returns (new data, removed instructions).
+    """
+    instrs = ls.parse(rus_data)
+    found = [k for k, ins in enumerate(instrs) if _str_at(ins, OP_MOVIE_RUS) == movie]
+    if len(found) != 1:
+        raise ValueError(f"{movie} is played {len(found)} times, expected once")
+    start = end = found[0]
+    end += 1
+    while instrs[end].op != ls.OP_JUMP_SCRIPT:
+        if instrs[end].op not in MOVIE_TAIL_OPS:
+            raise ValueError(f"unexpected op {instrs[end].op} after {movie}")
+        end += 1
+    block, kept = instrs[start:end], instrs[:start] + instrs[end:]
+    _renumber_markers(kept)
+    return ls.assemble(kept, {ins.offset: instrs[end] for ins in block}), block
+
+
+def replace_calls(rus_data, script, block):
+    """
+    Replace every call of `script` (op 22) in a RUS script by a copy of `block`
+    (from cut_movie) without its pauses (op 72). Returns (new data, calls replaced).
+    """
+    out, n = [], 0
+    for ins in ls.parse(rus_data):
+        if _str_at(ins, OP_CALL) != script:
+            out.append(ins)
+            continue
+        copy = [ls.Instr(b.op, b.flags, b.line, b.body) for b in block if b.op != OP_PAUSE_RUS]
+        copy[0].offset = ins.offset  # jumps to the call now land on the movie
+        out += copy
+        n += 1
+    _renumber_markers(out)
+    return ls.assemble(out), n

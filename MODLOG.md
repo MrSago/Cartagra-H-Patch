@@ -76,3 +76,12 @@ Single-player VN, no anti-cheat.
 - Fixed mixed scripts in the added lines: 111 Latin look-alike letters inside Cyrillic words replaced by Cyrillic (50 lines, 6 scenes); nothing else changed (checked character by character). The `$d` choice separator is markup, not a stray `d`.
 - Tables: `source` set to `tsv` in all 452 Russian rows that were `rus` (label only; the build ignores this column and still reuses the release line from `existing`). `languages/_original/`: Russian text removed (`ru_existing` cleared in 452 rows) and `source` set to `todo` everywhere.
 - Table format reduced to `row kind voice jp translation`: `source` and `existing` dropped (never read by the build). Before dropping, the 452 release lines in `existing` were copied into `translation`; `SCRIPT.PAK` byte-identical. `languages/_original/` converted too (translation empty). Older formats still load.
+
+## 2026-10-26 session 6: prologue and opening (branch `restore-prologue-opening`)
+
+- User report: in the JP game New Game plays a prologue (CG + narration at the bottom, no UI), then the opening movie, then the burial scene; the Steam game starts with the burial.
+- Found: the prologue `0000-op0_HD` is still in the Steam `SCRIPT.PAK`, fully translated (36 op 43 lines), ending with the opening and op 20 (return). Steam's executable starts New Game at `0000-op1`; the prologue is called (op 22) from `0308-02-00`, before part 2. The Rengoku movie moved from `0308-02-00` to the end of `0209-08-00`.
+- Movies: Steam swapped the names: Steam `cartagra_movie_02_en` = JP `cartagra_movie_01` (opening, "Sea of Solitude"), Steam `cartagra_movie_01_en` = JP `cartagra_movie_02` (Rengoku). Checked with ffprobe durations and contact sheets. No movie file needs to be shipped.
+- Build: new start-sequence step: `0000-op1` calls the prologue after its setup; `0308-02-00` plays Rengoku instead of calling the prologue; `0209-08-00` no longer plays it. Marker IDs of ops 25/119 renumbered (gives the JP numbering). No executable change. SCRIPT.PAK 6,380,340 bytes.
+- Tests: 3 unit tests for the new script edits; the integration test compares the reference with `start_sequence=False`.
+- In game: checked by the user ("everything works"). The agent did not touch the installed game.

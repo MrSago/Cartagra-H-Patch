@@ -44,5 +44,10 @@
        "why": "JP e045 is 2160 px tall (Steam 1934): scroll to its bottom like the JP script"}
     ]
   },
+  "start_sequence": {
+    "_comment": "JP: New Game -> prologue (0000-op0_HD, ends with the opening movie) -> new_game_script; the Rengoku movie plays in 0308-02-00 before part 2. Steam moved the prologue to 0308-02-00 (which calls it) and the Rengoku movie to the end of 0209-08-00, and swapped the two movie files' names (Steam cartagra_movie_01 = JP cartagra_movie_02 and vice versa). The executable starts New Game at new_game_script, which now calls the prologue first.",
+    "prologue": "0000-op0_HD",
+    "moved_movie": {"movie": "cartagra_movie_01", "from": "0209-08-00", "to": "0308-02-00"}
+  },
   "new_game_script": "0000-op1"
 }

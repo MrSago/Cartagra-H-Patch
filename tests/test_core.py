@@ -25,7 +25,7 @@ from cartagra_patch import script_port as sp  # noqa: E402
 from cartagra_patch.lucapak import Entry, LucaPak, SEC_HASH, SEC_PARENT, append_missing, replace_from, xxh64_pure  # noqa: E402
 
 # SHA-256 of the ru patch made by the pre-refactoring build_patch.py (installed and tested in game),
-# i.e. without translation tables; the tables only change SCRIPT.PAK
+# i.e. without translation tables and without the start sequence; both only change SCRIPT.PAK
 REFERENCE_RU = {
     "SCRIPT.PAK": "578b31f79f8d8a8b041bfa44e4e7b34c3b04dcf949ce8fc870ad877b2d5271ae",
     "image/EVENTCG.PAK": "a390601d1758eee655f632c55ecc6cf586a8e3ba62f3ea86981a6ec74e2774c4",
@@ -132,6 +132,70 @@ class LucaScriptTests(unittest.TestCase):
         parsed, bad = ls.check(out)
         self.assertEqual(bad, [])
         self.assertEqual(int.from_bytes(parsed[2].body[:4], "little"), parsed[1].offset)
+
+
+def build_script(instrs, jumps=None):
+    """Assemble instrs; jumps: {index of a GOTO/IF: index of its target}."""
+    pos = 0
+    for ins in instrs:
+        ins.offset = pos
+        pos += len(ins.encode())
+    for k, t in (jumps or {}).items():
+        body = bytearray(instrs[k].body)
+        struct.pack_into("<I", body, ls.jump_fields(instrs[k])[0], instrs[t].offset)
+        instrs[k].body = bytes(body)
+    return ls.assemble(instrs)
+
+
+def op(code, body=b"", line=None):
+    return ls.Instr(code, 1 if line is not None else 0, line, body)
+
+
+def named(code, name, head=b"\0\0", tail=b""):
+    return op(code, head + ls.make_str(name.encode()) + tail)
+
+
+class StartSequenceTests(unittest.TestCase):
+    def ops(self, data):
+        return [i.op for i in ls.parse(data)]
+
+    def test_insert_call_after_setup(self):
+        data = build_script([op(26), op(27), op(72, b"\x96\0", 5), op(ls.OP_GOTO, b"\0" * 4), op(21, ls.make_str(b"x"))],
+                            {3: 2})
+        out = ls.parse(sp.insert_call(data, "0000-op0_HD"))
+        self.assertEqual([i.op for i in out], [26, 27, sp.OP_CALL, 72, ls.OP_GOTO, 21])
+        self.assertEqual(sp.calls_to(sp.insert_call(data, "0000-op0_HD"), "0000-op0_HD"), 1)
+        self.assertEqual(int.from_bytes(out[4].body, "little"), out[3].offset)
+        with self.assertRaises(ValueError):
+            sp.insert_call(sp.insert_call(data, "a"), "b")
+
+    def test_cut_movie_redirects_jumps_and_renumbers(self):
+        instrs = [op(ls.OP_GOTO, b"\0" * 4), named(sp.OP_MOVIE_RUS, "m1", b"\x00\x80"), op(123, b"1234"),
+                  op(1, b"\x16\x2f\x01\0"), op(72, b"\x78\0"), op(21, ls.make_str(b"next")), op(25, b"\x01\x80")]
+        data, block = sp.cut_movie(build_script(instrs, {0: 1}), "m1")
+        out = ls.parse(data)
+        self.assertEqual([i.op for i in out], [ls.OP_GOTO, 21, 25])
+        self.assertEqual(int.from_bytes(out[0].body, "little"), out[1].offset)
+        self.assertEqual(out[2].body, b"\x00\x80")
+        self.assertEqual([i.op for i in block], [sp.OP_MOVIE_RUS, 123, 1, 72])
+        with self.assertRaises(ValueError):
+            sp.cut_movie(data, "m1")
+
+    def test_replace_calls_with_movie(self):
+        block = [named(sp.OP_MOVIE_RUS, "m1", b"\x00\x80"), op(123, b"1234"), op(1, b"\x16\x2f\x01\0"), op(72, b"\x78\0")]
+        call = lambda: named(sp.OP_CALL, "pro", b"\0\0", b"\0" * 4)  # noqa: E731
+        instrs = [op(18, ls.make_str(b"#1") + b"\0" * 4), op(ls.OP_GOTO, b"\0" * 4),
+                  call(), op(21, ls.make_str(b"a")), op(25, b"\x00\x80"),
+                  call(), op(21, ls.make_str(b"b")), op(25, b"\x01\x80")]
+        data, n = sp.replace_calls(build_script(instrs, {0: 5, 1: 2}), "pro", block)
+        out = ls.parse(data)
+        self.assertEqual(n, 2)
+        self.assertEqual(self.ops(data), [18, ls.OP_GOTO, 119, 123, 1, 21, 25, 119, 123, 1, 21, 25])
+        self.assertEqual(int.from_bytes(out[0].body[-4:], "little"), out[7].offset)
+        self.assertEqual(int.from_bytes(out[1].body, "little"), out[2].offset)
+        markers = [i.body[:2] for i in out if i.op in (25, 119)]
+        self.assertEqual(markers, [struct.pack("<H", 0x8000 | k) for k in range(4)])
+        self.assertEqual(sp.calls_to(data, "pro"), 0)
 
 
 class CzToolTests(unittest.TestCase):
@@ -269,7 +333,8 @@ def tree_hashes(folder):
 class IntegrationTests(unittest.TestCase):
     """
     Builds ru from the real inputs into a temporary folder (not the project's build/ or dist/):
-    once without translation tables (must equal the reference), twice with them (must be identical).
+    once without translation tables and start sequence (must equal the reference), twice with both
+    (must be identical; New Game must call the prologue).
     """
 
     def test_ru_build_is_reproducible_and_leaves_inputs_alone(self):
@@ -288,16 +353,21 @@ class IntegrationTests(unittest.TestCase):
             try:
                 pipeline.BUILD_DIR = os.path.join(tmp, "build")
                 pipeline.DIST_DIR = os.path.join(tmp, "dist")
-                for tables in (os.path.join(tmp, "no tables"), lang["translation_dir"], lang["translation_dir"]):
-                    opt = pipeline.BuildOptions(dict(lang, translation_dir=tables), dirs["jp-fhd"], dirs[lang["target"]])
+                for tables, start in ((os.path.join(tmp, "no tables"), False),
+                                      (lang["translation_dir"], True), (lang["translation_dir"], True)):
+                    opt = pipeline.BuildOptions(dict(lang, translation_dir=tables), dirs["jp-fhd"], dirs[lang["target"]],
+                                                start_sequence=start)
                     dist = pipeline.run_build(opt, project.load_restoration(), log=quiet)
                     hashes.append(tree_hashes(dist))
                     shutil.rmtree(os.path.join(tmp, "build"))
+                script = {e.name: e.data for e in LucaPak.read(os.path.join(dist, "files", "SCRIPT.PAK")).entries}
             finally:
                 pipeline.BUILD_DIR, pipeline.DIST_DIR = saved
         files = [{k[len("files/"):]: v for k, v in h.items() if k.startswith("files/")} for h in hashes]
         self.assertEqual(files[0], REFERENCE_RU)
         self.assertEqual(hashes[1], hashes[2])
+        self.assertEqual(sp.calls_to(script["0000-op1"], "0000-op0_HD"), 1)
+        self.assertEqual(sp.calls_to(script["0308-02-00"], "0000-op0_HD"), 0)
         self.assertEqual({k: v for k, v in files[1].items() if k != "SCRIPT.PAK"},
                          {k: v for k, v in REFERENCE_RU.items() if k != "SCRIPT.PAK"})
         for set_name, folder in dirs.items():

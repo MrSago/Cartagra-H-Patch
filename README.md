@@ -19,7 +19,8 @@ Technical details, file formats and reverse-engineering notes are in [TECHNICAL_
 
 | Content | Details |
 | --- | --- |
-| Scenes | 20 scenes that Steam rewrote are replaced by the uncensored versions; 4 removed scenes are added back. All other scripts stay unchanged |
+| Scenes | 20 scenes that Steam rewrote are replaced by the uncensored versions; 4 removed scenes are added back |
+| Game start | New Game plays the prologue (narration over CGs, no interface) and the opening movie again before the first scene, as in the Japanese release. Steam had moved both to just before the second part; the Rengoku movie goes back there, as in the Japanese release. The game's own Russian prologue text and movie files are used |
 | CGs | 150 event CGs that Steam removed |
 | Edited pictures | 51 pictures that Steam edited (clothes added, blood, wounds and bodies hidden) are replaced by the originals |
 | Voices | 1,901 voice clips of the restored scenes |
@@ -162,9 +163,10 @@ The build never changes the tables in `languages/`. It writes a copy of every ta
 
 Tested in game with the Russian release (2026-10-25 and 2026-10-26):
 
-- New game: the prologue and the following scenes show the correct backgrounds (the black-screen bug of the old patch is fixed).
+- New game: the first scenes show the correct backgrounds (the black-screen bug of the old patch is fixed). This test was made before the prologue was restored.
 - Restored scenes `a1-7-2h`, `0208-13-01H` (choices and branches) and `0217-99-04h` (a removed scene) play, with voices and restored CGs, and continue into the following scenes.
 - The restored pictures display uncensored.
+- The restored game start: New Game plays the prologue and the opening movie, then the first scene.
 
 Not tested yet: the other 21 restored scenes, a full playthrough, loading saves across installing the patch, the CG gallery, scene replay, and anything in English.
 

@@ -25,6 +25,7 @@ Module names refer to `cartagra_patch/<name>.py`. Before the 2026-10-26 refactor
 - [Scene Scripts](#scene-scripts)
 - [Porting Scripts from JP to RUS](#porting-scripts-from-jp-to-rus)
 - [What Steam Censored](#what-steam-censored)
+- [Start Sequence](#start-sequence)
 - [EVENTCG.PAK Comparison](#eventcgpak-comparison)
 - [Censored Images](#censored-images)
 - [Voice, Music and Sound Effects](#voice-music-and-sound-effects)
@@ -49,6 +50,7 @@ Module names refer to `cartagra_patch/<name>.py`. Before the 2026-10-26 refactor
 5. **[V]** 1,901 voice clips (the H-scene voices) were removed from the Steam `VOICE.PAK`.
 6. **[V]** All 24 censored scenes are now ported and all 150 restored CGs are referenced. 3,970 of 4,422 restored lines have no Russian translation in the release; since 2026-10-26 the Russian tables translate all of them (see [Text for the Russian slot](#text-for-the-russian-slot)).
 7. **[V]** Steam also **edited 51 pictures** that the Russian scripts still show (35 EVENTCG, 16 OTHCG): clothes painted on, blood, wounds and corpses removed or blacked out, frames recomposed. The patch puts the JP originals back in the same slots.
+8. **[V]** Steam **moved the prologue and the opening movie** from New Game to just before part 2, and the Rengoku movie from there to the end of `0209-08-00`. The patch restores the JP order with three script edits (see [Start Sequence](#start-sequence)).
 
 ## Game Installations in This Project
 
@@ -89,7 +91,7 @@ All paths are relative to the project root `Cartagra-Patch/`.
 | `voice/SYSVOICE.PAK` | 18 entries | 19 entries | |
 | `music/MUSIC.PAK` | 44 | 44 | same names and order |
 | `se/SE.PAK` | 241 | 236 | JP list is a prefix of the RUS list |
-| `movie/` | `cartagra_movie_NN_en.webm` | `cartagra_movie_NN.webm` | scripts name movies without the `_en` suffix in both |
+| `movie/` | `cartagra_movie_NN_en.webm` | `cartagra_movie_NN.webm` | scripts name movies without the `_en` suffix in both. Steam swapped 01 and 02 (see [Start Sequence](#start-sequence)) |
 
 **[V]** The RUS executable contains the string `*.PAK` and mounts image archives by wildcard.
 
@@ -156,10 +158,10 @@ All paths are relative to the project root `Cartagra-Patch/`.
 
 **[V]** Cause: `pak_tool.py pack` wrote `id_start = 1` (the original is 1001) and dropped the sections. It also sorted entries by name and inserted the 150 new files among them. So:
 
-- EVENTCG entries took IDs 1..373, overlapping BGCG's 1..179. Background loads returned event CGs, which gave the wrong background in scene 2 (scene 1, the prologue, uses only OTHCG/EVENTCG art that is loaded differently). **[H]** which archive wins on a collision was not tested.
+- EVENTCG entries took IDs 1..373, overlapping BGCG's 1..179. Background loads returned event CGs, which gave the wrong background in scene 2 (scene 1, `0000-op1`, uses only OTHCG/EVENTCG art that is loaded differently). **[H]** which archive wins on a collision was not tested.
 - No EVENTCG entry had an ID ≥ 1001 any more, so every event-CG load failed, which gave the black screen.
 
-**[V]** Fix: the build keeps the 223 RUS entries untouched (IDs 1001–1223), appends the 150 JP-only CGs (IDs 1224–1373) with their parent IDs remapped by name, and keeps the header and sections. Tested in game: the prologue, scene 2 (correct newspaper CG) and further scenes play normally.
+**[V]** Fix: the build keeps the 223 RUS entries untouched (IDs 1001–1223), appends the 150 JP-only CGs (IDs 1224–1373) with their parent IDs remapped by name, and keeps the header and sections. Tested in game: scene 1 (`0000-op1`), scene 2 (correct newspaper CG) and further scenes play normally.
 
 ## Scene Scripts
 
@@ -334,6 +336,32 @@ New scripts are appended at the end of `SCRIPT.PAK`, after the metadata entries,
 
 **[V]** Steam's rewritten versions replace explicit lines with new, shorter ones. Those Steam-only Russian lines are dropped when the JP scene is ported.
 
+## Start Sequence
+
+**[V]** (scripts compared instruction by instruction, movies compared by duration and frames)
+
+| | JP FHD | Steam (RUS) |
+| --- | --- | --- |
+| New Game starts | `0000-op0_HD` (**[H]** the first script; the JP executable names no script) | `0000-op1` (the executable contains the string `0000-op1`) |
+| `0000-op0_HD` (prologue: 36 narrated lines over CGs, op 43, no interface) | ends with the opening movie, then JUMPs to `0000-op1` | the same prologue with Russian text in all 36 lines; ends with the same opening movie and returns (op 20). Called (op 22) only by `0308-02-00` |
+| `0000-op1` (the burial) | entered from the prologue | entered from New Game |
+| `0209-08-00` | JUMPs to `0209-09-00` | plays the Rengoku movie first (plus `#12054 = 1` and a pause) |
+| `0308-02-00` (before part 2, routes `a1`/`a2`) | plays the Rengoku movie, then JUMPs to `a1-1-1` or `a2-1-1` | calls `0000-op0_HD` (prologue + opening) instead |
+
+Movies: Steam swapped the file names. Steam `cartagra_movie_02_en` (110.7 s) is the JP opening `cartagra_movie_01` ("Sea of Solitude", 112.0 s) with English credits; Steam `cartagra_movie_01_en` (139.8 s) is the JP Rengoku movie `cartagra_movie_02` (138.3 s), re-edited. So the Steam scripts already play the right file in each place, and the patch needs no movie files.
+
+`0000-op0_HD` in the Steam build starts with a "watch / skip the prologue" choice (`プロローグを見る$dプロローグを見ない`). It is preceded by `#12052 = 0` and `IF (#12052)`, which jumps over it, so it is never shown (**[H]** op 19 jumps when the condition is false, as the if/else blocks elsewhere show; not checked in game).
+
+The patch restores the JP order without changing the executable (`definitions/restoration.json`, `start_sequence`):
+
+1. `0000-op1`: a call of `0000-op0_HD` (op 22, like Steam's own call in `0308-02-00`) is inserted after the setup instructions (op 26 to op 27). The prologue plays, returns, and the burial follows.
+2. `0308-02-00`: both calls of `0000-op0_HD` are replaced by the Rengoku block taken from `0209-08-00` (movie, op 123, `#12054 = 1`; without the pause), as in JP.
+3. `0209-08-00`: the Rengoku block (movie, op 123, `#12054 = 1`, pause) is removed; jumps to it go to the following JUMP.
+
+Ops 25 and 119 carry a marker ID (`0x8000 | n`, unique and ascending in script order in every script of both builds, mostly 0, 1, 2...; **[H]** purpose unknown). The two edited scripts are renumbered from 0, which gives the JP numbering. The build checks that JP `0000-op0_HD` leads to `0000-op1`, that `0308-02-00` is the only caller of the prologue and that the movie block has the expected instructions; otherwise it stops.
+
+**[V]** Checked in game by the user on 2026-10-26 ("everything works").
+
 ## EVENTCG.PAK Comparison
 
 **[V]** From the archives (names and sizes):
@@ -414,7 +442,7 @@ Repository contents: `pak.py`, `SCRIPT.PAK`, `SCRIPT_FHD/` (`solvev2.py` text ex
 1. **EVENTCG**: read `<target>/image/EVENTCG.PAK`, append the JP-only entries (`lucapak.append_missing`: parents remapped by name, xxh64 computed), replace the censored entries in place (`replace_from`) and append the split copy `e047_jp` (`append_copy`). Untouched entries are byte-identical and in their original order (verified).
    **OTHCG**: replace the 16 censored pictures in place.
 2. **VOICE**: the same for `VOICE.PAK` with `VOICE0.PAK` as donor, copying section values.
-3. **SCRIPT**: build the name maps (images over all target image archives with the new EVENTCG; voices with the new VOICE; variables from `_varname`), the translation memory and the first free select slot. Port the 24 scenes, check every jump target, write the translation tables, retarget the 4 predecessor JUMPs and append the 4 new scenes. Then apply the two target script fixes for censored pictures. 254 of 274 entries stay byte-identical.
+3. **SCRIPT**: build the name maps (images over all target image archives with the new EVENTCG; voices with the new VOICE; variables from `_varname`), the translation memory and the first free select slot. Port the 24 scenes, check every jump target, write the translation tables, retarget the 4 predecessor JUMPs and append the 4 new scenes. Then apply the two target script fixes for censored pictures and restore the [start sequence](#start-sequence) (3 scripts). 251 of 274 entries stay byte-identical.
 4. **Output**: write `BUILD_INFO.txt` and move the staging folder to `dist/<lang>/`.
 
 **Obsolete (moved to `local/legacy/`, outside git, on 2026-10-26):** `pak_tool.py`, `create_patch.py`, `Patch/create_patch.py` and their outputs (`EVENTCG_patched.PAK`, `EVENTCG_patched/`, `PATCH_REPORT.md`). `pak_tool.py pack` rewrites the header (`id_start` = 1, sections dropped, entries sorted), which caused the bug. `create_patch.py` also replaced only `[:5]` of the 27 size-different files while reporting 27. The useful parts of `pak_tool.py` (`unpack`, `compare`) are now `lucapak` commands; there is deliberately no `pack` command.
@@ -431,7 +459,7 @@ Refactored on 2026-10-26 so the project no longer depends on the game installati
 | `cartagra_patch/project.py` | Paths (all resolved from the project root, never from the working directory), language and definition loading, input validation (`check_inputs`), `BuildError` | yes |
 | `cartagra_patch/pipeline.py` | `BuildOptions`, `run_build` (the steps above), `BUILD_INFO.txt` | yes |
 | `cartagra_patch/lucapak.py`, `lucascript.py`, `script_port.py`, `cztool.py` | Format libraries and the porter (moved from the top level; code unchanged except for package imports, a pluggable `xxh64`, the `lucapak` CLI and neutral TSV column names) | yes |
-| `definitions/restoration.json` | What to restore: censored and removed scenes (with predecessors), censored images, split images, target script fixes, the New Game script used by test builds. Moved out of the code; shared by all languages | yes |
+| `definitions/restoration.json` | What to restore: censored and removed scenes (with predecessors), censored images, split images, target script fixes, the start sequence, the New Game script. Moved out of the code; shared by all languages | yes |
 | `definitions/inputs.json` | Required files per input set, with use (`data` = copied or patched, `index` = only entry names read), size, entry count and SHA-256 | yes |
 | `languages/<lang>/language.json`, `translation/` | Language settings and status; translation tables ([languages/README.md](languages/README.md)) | yes |
 | `tests/test_core.py` | Automated tests (standard library `unittest`) | yes |
@@ -463,7 +491,8 @@ Refactored on 2026-10-26 so the project no longer depends on the game installati
 - the file list in `definitions/inputs.json` (copied from `ru-steam`; no sizes, entry counts or checksums yet, so only presence and PAK headers are checked);
 - whether the English `SCRIPT.PAK` has the same script names, predecessor JUMPs and free select slots;
 - whether the English EVENTCG/OTHCG have the same censored entries at the same indices (the image comparison was done on the Russian release only);
-- the two target script fixes (`0208-15-00`, `0210-07-00`) match by image ID and coordinates; the build fails with a clear error if they match nothing.
+- the two target script fixes (`0208-15-00`, `0210-07-00`) match by image ID and coordinates; the build fails with a clear error if they match nothing;
+- the start sequence assumes the same Steam layout (`0308-02-00` calls `0000-op0_HD`, `0209-08-00` plays `cartagra_movie_01`); the build fails if it differs.
 
 The build accepts `--language en`, but it fails at the input check until `inputs/en-steam/files/` exists.
 
@@ -474,12 +503,13 @@ Test setup: `CARTAGRA.exe`, window resized to 1280×720 (on a 2048×1280 screen 
 | Date | Build | Test | Result |
 | --- | --- | --- | --- |
 | before 2026-10-25 | old `EVENTCG_patched.PAK` (`pak_tool.py`) | New game | **[O]** scene 1 OK, scene 2 wrong background, then black screen, no advancing |
-| 2026-10-25 | fixed `EVENTCG.PAK` only | New game, ~100 lines | **[V]** prologue OK, scene 2 correct newspaper CG, study background, dialogue advances. Bug fixed |
+| 2026-10-25 | fixed `EVENTCG.PAK` only | New game, ~100 lines | **[V]** scene 1 (`0000-op1`; the prologue was not restored yet) OK, scene 2 correct newspaper CG, study background, dialogue advances. Bug fixed |
 | 2026-10-25 | full patch, test start `a1-7-2h` | Whole scene | **[V]** JP placeholder and existing Russian lines display; speaker names in Russian; voice indicator on; restored CG `e061` shown; continues into the next Russian script |
 | 2026-10-25 | full patch, test start `0208-13-01H` | Choices | **[V]** restored CGs shown; the choice menus work; option 2 of choice 1 branches to choice 3 (as in the JP script); after the scene the game continues to the next day with the original Russian choices |
 | 2026-10-25 | full patch, test start `0217-99-03` | Removed scene | **[V]** the predecessor jumps into `0217-99-04h`, which plays with voice |
 | 2026-10-26 | full patch with restored pictures, test start `0207-15-00` | Photo picture | **[V]** `f035` uncensored at the line of the user's report |
 | 2026-10-26 | same | Restored pictures | **[V]** confirmed in game by the user |
+| 2026-10-26 | full patch with the start sequence | New Game | **[V]** prologue, opening and the following scenes work; confirmed in game by the user |
 
 The 4 scenes added last (`0210-10-00`, `0214-05-00`, `0215-03-00`, `0215-05-02`) went through the same automatic checks but have not been played in game.
 
@@ -492,20 +522,20 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 | Area | Tests |
 | --- | --- |
 | Archives | xxHash64 test vectors; byte-identical PAK round trip; appending keeps the IDs of existing entries and remaps parent IDs by name; in-place replacement keeps the ID |
-| Scripts | jump targets relocated after inserting an odd-length instruction |
+| Scripts | jump targets relocated after inserting an odd-length instruction; start sequence: call inserted after the setup instructions, movie block cut (jumps redirected, marker IDs renumbered), calls replaced by the movie (jumps land on it) |
 | Images | CZ4 decode of an image made by a test encoder (2 LZW blocks, delta bands); alpha compositing |
 | Translation tables | write/read round trip with escapes and the five-column header; older formats (`source`/`existing`/`translation`, `ru_existing`/`ru`); missing table |
 | Languages and paths | every language has a valid status and an existing input set; `en` is not `complete`; unknown language rejected; project paths are absolute and independent of the working directory; output names `ru`, `ru-partial`, `ru-test` |
 | Input validation | missing folder and files; wrong entry count; wrong size; changed data detected by SHA-256 and skipped with `verify_checksums=False` |
 | CLI | `--help` (0), no language (2), unknown language (2), `--test-set` without `--test-start` (2), `--list-languages` shows the statuses, missing inputs (1); run from a working directory with spaces, inputs in a folder with spaces |
-| Integration (`CARTAGRA_INTEGRATION=1`) | full `ru` build twice from `inputs/` into a temporary folder: identical output, equal to the SHA-256 of the pre-refactoring build, inputs still pass the checksum check and are not modified |
+| Integration (`CARTAGRA_INTEGRATION=1`) | `ru` build from `inputs/` into a temporary folder without tables and start sequence (equal to the SHA-256 of the pre-refactoring build), then twice with both (identical output; New Game calls the prologue, `0308-02-00` no longer does); inputs still pass the checksum check and are not modified |
 
-**[V]** 2026-10-26: 16 unit tests pass; the integration test passes (74 s). `python build.py --language ru` (with input checksums) takes about 40 s and reproduces the reference SHA-256 of all four archives; `--language en --check` fails with exit code 1 because `inputs/en-steam/files/` does not exist.
+**[V]** 2026-10-26 (after the start sequence): 19 unit tests pass; the integration test passes (105 s). `python build.py --language ru` (with input checksums) takes about 40 s and reproduces the reference SHA-256 of all four archives; `--language en --check` fails with exit code 1 because `inputs/en-steam/files/` does not exist.
 
 ## Known Issues
 
 1. The 3,970 Russian lines added on 2026-10-26 have not been checked in game (line length, line breaks, choice menus).
-2. **[?]** Saves made inside the 24 changed scenes or the 4 retargeted predecessors may break after installing or removing the patch (they store positions in scripts whose layout changed). Not tested.
+2. **[?]** Saves made inside the 24 changed scenes, the 4 retargeted predecessors or the 3 start-sequence scripts (`0000-op1`, `0209-08-00`, `0308-02-00`) may break after installing or removing the patch (they store positions in scripts whose layout changed). Not tested.
 3. **[H]** New select flag slots (197+) assume the engine's flag array is large enough. The JP build uses slots up to 229 (plus its options), and the in-game choice test worked.
 4. Save thumbnails for restored scenes are not set (JP op 130 dropped); `EVENTCG_SAVE.PAK` is unused.
 5. **[?]** The Extras CG gallery and scene replay probably do not list restored content (JP op 129 dropped; gallery data not studied).
@@ -514,7 +544,6 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 8. Restored pictures: the JP 4368×2457 pan image `e007k0` is not used (the RUS script shows the static uncensored `e007` instead), and Steam's own frame `e007k0` is no longer shown.
 9. `_scr_label` is not updated for the ported scenes (**[H]** debug data only).
 10. 21 of the 24 restored scenes have not been played in game.
-
 ## Open Questions
 
 - Do saves inside changed scripts survive? (Test: save in a ported scene, reload.)

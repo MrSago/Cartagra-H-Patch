@@ -29,11 +29,13 @@ INFO_FILE = "BUILD_INFO.txt"
 
 
 class BuildOptions:
-    def __init__(self, language, jp_dir, target_dir, voice=True, scenes=None, test_start=None, test_set=()):
+    def __init__(self, language, jp_dir, target_dir, voice=True, scenes=None, test_start=None, test_set=(),
+                 start_sequence=True):
         self.language = language  # loaded languages/<code>/language.json (project.load_language)
         self.jp_dir = jp_dir
         self.target_dir = target_dir
         self.voice = voice
+        self.start_sequence = start_sequence  # False only to compare with builds made before it existed
         self.scenes = scenes  # None = all
         self.test_start = test_start
         self.test_set = list(test_set)  # [(var, value)]
@@ -201,6 +203,9 @@ def run_build(opt, restoration, log=print):
         set_entry(tg_by[name], data)
         log(f"  {name:12s} script fix: {fix['kind']} {fix['image']} ({n}x)")
 
+    if opt.start_sequence:
+        _restore_start_sequence(log, restoration, jp_by, tg_by, scenes)
+
     if opt.test_start:
         start = restoration["new_game_script"]
         set_entry(tg_by[start], test_stub(tg_by[start].data, opt.test_start, opt.test_set))
@@ -219,6 +224,31 @@ def run_build(opt, restoration, log=print):
     os.makedirs(DIST_DIR, exist_ok=True)
     os.replace(staging, dist)
     return dist
+
+
+def _restore_start_sequence(log, restoration, jp_by, tg_by, scenes):
+    """New Game plays the prologue and the opening again; 0308-02-00 plays the Rengoku movie again."""
+    seq = restoration["start_sequence"]
+    prologue, first, mv = seq["prologue"], restoration["new_game_script"], seq["moved_movie"]
+    if sp.final_jump(jp_by[prologue].data) != first:
+        raise BuildError(f"JP {prologue} does not lead to {first}")
+    for name in (first, mv["from"], mv["to"]):
+        if name in scenes:
+            raise BuildError(f"{name} is ported; the start sequence fix does not apply")
+    callers = [n for n, e in tg_by.items() if not n.startswith("_") and sp.calls_to(e.data, prologue)]
+    if callers != [mv["to"]]:
+        raise BuildError(f"{prologue} is called by {callers}, expected only {mv['to']}")
+    try:
+        data, block = sp.cut_movie(tg_by[mv["from"]].data, mv["movie"])
+        set_entry(tg_by[mv["from"]], data)
+        data, n = sp.replace_calls(tg_by[mv["to"]].data, prologue, block)
+        set_entry(tg_by[mv["to"]], data)
+        set_entry(tg_by[first], sp.insert_call(tg_by[first].data, prologue))
+    except ValueError as e:
+        raise BuildError(f"start sequence: {e}") from None
+    log(f"  {first:12s} start sequence: calls {prologue} (prologue + opening) first")
+    log(f"  {mv['to']:12s} start sequence: plays {mv['movie']} instead of calling {prologue} ({n}x)")
+    log(f"  {mv['from']:12s} start sequence: {mv['movie']} removed")
 
 
 def _write_info(staging, opt, total, nscenes):
