@@ -6,7 +6,7 @@
   },
   "images": [
     {
-      "image": "SYSCG/title_menu1", "font": "serif", "polarity": "dark", "min_sx": 0.75, "uniform": true, "keep_extent": true,
+      "image": "SYSCG/title_menu1", "font": "serif", "polarity": "dark", "min_sx": 0.9, "tighten": 0.04, "uniform": true, "same_fit": true, "keep_extent": true, "menu": {"gap": 26, "width": 1920, "scale": {"title": 0.9, "extras": 0.95}, "rows": {"title": ["START", "LOAD", "OPTIONS", "MANUAL", "EXTRAS", "EXIT"], "extras": ["GALLERY", "MUSIC", "VIDEOS", "ENDINGS", "BACK"]}},
       "copy_to": [
         {"image": "SYSCG/title_menu2", "grid": {"x": [{"at": 0, "polarity": "light", "thr": 0.6}, {"at": 380, "polarity": "light", "thr": 0.8}, {"at": 760, "polarity": "light", "thr": 0.8}], "y": [0, 82, 164, 247, 328, 410, 492, 574, 656, 737, 820, 902], "box": [0, 0, 380, 82]}},
         {"image": "SYSCG/title_menu3", "grid": {"x": [{"at": 0, "fit_from": [380, 0], "fill": "rows"}, 380, {"at": 760, "fit_from": [-380, 0]}], "y": [0, 82, 164, 247, 328, 410, 492, 574, 656, 737, 820, 902], "box": [0, 0, 380, 82]}}
@@ -108,7 +108,7 @@
       ]
     },
     {
-      "image": "resident/PARTS/system_menu_icon", "font": "serif", "polarity": "light", "thr": 0.6, "fill": "rows", "bg": "inpaint", "radius": 6, "align": "center", "uniform": true, "pad": 6, "by": "col", "max_w": 205, "min_sx": 0.85, "erase_thr": 0.3,
+      "image": "resident/PARTS/system_menu_icon", "font": "serif", "polarity": "light", "thr": 0.6, "fill": "rows", "bg": "inpaint", "radius": 6, "align": "center", "uniform": true, "same_fit": true, "max_sx": 1.0, "tighten": 0.04, "pad": 6, "by": "col", "max_w": 205, "min_sx": 0.9, "erase_thr": 0.3,
       "grid": {"x": [5, 265, 525, 785, 1045, 1305, 1565, 1825, 2085], "y": [0, {"at": 260, "fit_from": [0, -260]}, {"at": 520, "fit_from": [0, -520]}], "box": [0, 172, 250, 259]},
       "words": [
         ["SAVE", "СОХРАНИТЬ"],

@@ -33,9 +33,15 @@ images_text.json:
     uniform   true: all texts of the picture and its copy_to pictures get the same size (that of the
               one shrunk most) and each word the same squeeze in all of them; texts with a "group"
               key share the size only within their group
+    same_fit  with "uniform": every text of a group starts from one size, horizontal scale and baseline,
+              the medians of the English texts' fits (one text's fit can be off: Q's tail makes "Q.SAVE"
+              look taller, so it was fitted smaller and stretched)
+    max_sx    largest horizontal scale for "same_fit" (1.0: never wider than the font)
     keep_extent  true: the translated text (with its effect) stays within the columns the original
               covered in the box (for buttons the engine cuts to the original width)
     pad       least space between the translated letters and the sides of the box, px
+    tighten   how much closer the letters may move, per letter gap and as a fraction of the size,
+              before a text that is too wide is squeezed (default 0)
     min_sx    least horizontal scale relative to the fitted one before the size is reduced (0.85)
     size, sx  fixed size (px) and horizontal scale instead of fitting them to the English text
     fit       "height" (default): size from the height of the English letters, horizontal scale from
@@ -56,6 +62,11 @@ images_text.json:
             ("box_w"/"box_h" change the width/height of its boxes)
   words     [[en, ru] or {"en": ..., "ru": ..., overrides}], one per row ("by": "row", default) or per
             column ("by": "col"); every cell of that row or column gets the word
+  menu      with "uniform" and "keep_extent", for a horizontal menu whose buttons the engine cuts to the
+            original items' widths and lines up: {"rows": {group: [English words in screen order]},
+            "gap": px between buttons, "width": screen width, "scale": {group: factor}}. Each word is
+            placed in its button (the same place in every state) so that the gaps between the words are as
+            even as the buttons allow; "scale" makes a group's words smaller to leave room for that
   copy_to   other pictures with the same layout that get the same items; an element may be
             {"image": ..., overrides} to change keys (such as "grid") for that picture
 """
@@ -422,26 +433,41 @@ def render_item(fonts, it, out, orig, report):
         # the engine shows only as much of the button as the original picture covered
         cols = np.nonzero((img[..., 3] > 0.01).any(0))[0]
         lim = [max(lim[0], cols[0] + margin), min(lim[1], cols[-1] + 1 - margin)]
-    # how much the translation must shrink to fit (for "uniform")
-    cov, _ = text_mask(fonts, it["font"], it["ru"], size, sx, tracking)
+    # how much the translation must shrink to fit (for "uniform"), with the letter spacing tightened
+    room = min(lim[1] - lim[0], it.get("max_w", 1e9))
+    it["_size"], it["_sx"] = size, sx
+    # the translation starts from the fitted size and scale, or from those given for a whole group
+    size_ru, sx_ru = it.get("ru_size", size), it.get("ru_sx", sx)
+    trk_ru = tracking * size_ru / size
+    tight = trk_ru - it.get("tighten", 0.0) * size_ru
+    cov, _ = text_mask(fonts, it["font"], it["ru"], size_ru, sx_ru, tight)
     rx0, _, rx1, _ = ink_box(cov)
-    it["_fit"] = min(lim[1] - lim[0], it.get("max_w", 1e9)) / ((rx1 - rx0) / SS)
-    rsize, rsx = size * it.get("start_scale", 1.0), sx * it.get("start_sx", 1.0)
+    it["_fit"] = room / ((rx1 - rx0) / SS)
+    rsize, rsx = size_ru * it.get("start_scale", 1.0), sx_ru * it.get("start_sx", 1.0)
+    rtrk = tight if it.get("start_tight") else trk_ru
+    gaps = max(1, len(it["ru"]) - 1)
     while True:
-        cov, org = text_mask(fonts, it["font"], it["ru"], rsize, rsx, tracking * rsize / size)
+        cov, org = text_mask(fonts, it["font"], it["ru"], rsize, rsx, rtrk * rsize / size_ru)
         rx0, _, rx1, _ = ink_box(cov)
         w = (rx1 - rx0) / SS
-        if w <= min(lim[1] - lim[0], it.get("max_w", 1e9)) + 0.01:
+        if w <= room + 0.01:
             break
-        if rsx > sx * it.get("min_sx", 0.85) + 1e-6:
-            rsx = max(sx * it.get("min_sx", 0.85), rsx * min(lim[1] - lim[0], it.get("max_w", 1e9)) / w)
+        if rtrk > tight + 1e-6:
+            # first closer letters, then narrower ones, then smaller ones
+            rtrk = max(tight, rtrk - (w - room) / gaps / max(rsx, 1e-6) * size_ru / rsize - 0.01)
+        elif rsx > sx_ru * it.get("min_sx", 0.85) + 1e-6:
+            rsx = max(sx_ru * it.get("min_sx", 0.85), rsx * room / w)
         else:
             rsize *= 0.98
     align = it.get("align", "left")
     left = {"left": en_l, "center": (en_l + en_r - w) / 2, "right": en_r - w}[align]
-    left = min(max(left, lim[0]), lim[1] - w)
+    left = min(max(it.get("ink_left", left), lim[0]), lim[1] - w)
+    it["_w"], it["_lim"] = w, lim
+    if it.get("keep_extent"):
+        it["_cut"] = int(cols[-1]) + 1
     rx = left - (rx0 - org[0]) / SS + it.get("dx", 0)
-    ry = y + it.get("dy", 0)
+    it["_y"] = y
+    ry = it.get("ru_y", y) + it.get("dy", 0)
     can_ru = place(cov, org, H, W, rx, ry)
     out[y0:y1, x0:x1] = composite(can_ru, rsize / size)
     it["_shift"] = shift
@@ -470,6 +496,55 @@ def compare_sheet(report, path):
     bg = Image.new("RGBA", im.size, (90, 90, 110, 255))
     bg.alpha_composite(im)
     bg.convert("RGB").save(path)
+
+
+def menu_positions(items, menu):
+    """
+    Where each word of a horizontal menu goes in its button, so that the gaps between the words are as
+    even as possible. The engine cuts every button to the width of the original item and lines the
+    buttons up, `gap` apart and centred on a `width`-wide screen. Returns {(group, en): ink left in the box}.
+    """
+    from scipy.optimize import linprog
+    out = {}
+    for group, order in menu["rows"].items():
+        mine = [[it for it in items if it.get("group") == group and it["en"] == en] for en in order]
+        if not all(mine):
+            missing = [en for en, m in zip(order, mine) if not m]
+            raise SystemExit(f"menu: no item {missing} in group {group!r}")
+        cut = [max(it["_cut"] for it in m) for m in mine]
+        w = [max(it["_w"] for it in m) for m in mine]
+        lo = [max(it["_lim"][0] for it in m) for m in mine]
+        hi = [min(it["_lim"][1] for it in m) - wk for m, wk in zip(mine, w)]
+        # a word that was sized to fill its button exactly has no choice (rounding may leave lo > hi)
+        lo, hi = [min(a, (a + c) / 2) for a, c in zip(lo, hi)], [max(c, (a + c) / 2) for a, c in zip(lo, hi)]
+        n = len(order)
+        x = (menu.get("width", 1920) - sum(cut) - menu.get("gap", 26) * (n - 1)) / 2
+        cells = []
+        for c in cut:
+            cells.append(x)
+            x += c + menu.get("gap", 26)
+        # variables: ink left of each word on the screen, smallest gap, largest gap, margin to the limits
+        bounds = [(cells[k] + lo[k], cells[k] + hi[k]) for k in range(n)] + [(None, None)] * 2 + [(0, None)]
+        A, b = [], []
+        for k in range(n - 1):
+            row = np.zeros(n + 3); row[k + 1], row[k], row[n + 1] = 1, -1, -1; A.append(row); b.append(w[k])
+            row = np.zeros(n + 3); row[k + 1], row[k], row[n] = -1, 1, 1; A.append(row); b.append(-w[k])
+        for k in range(n):
+            row = np.zeros(n + 3); row[k], row[n + 2] = -1, 1; A.append(row); b.append(-(cells[k] + lo[k]))
+            row = np.zeros(n + 3); row[k], row[n + 2] = 1, 1; A.append(row); b.append(cells[k] + hi[k])
+        spread = np.zeros(n + 3); spread[n], spread[n + 1] = -1, 1
+        first = linprog(spread, A_ub=A, b_ub=b, bounds=bounds)
+        if not first.success:
+            raise SystemExit(f"menu {group!r}: the words do not fit their buttons")
+        # among the most even layouts, the one with the most room to the button edges
+        roomy = np.zeros(n + 3); roomy[n + 2] = -1
+        second = linprog(roomy, A_ub=A + [spread], b_ub=b + [first.fun + 0.25], bounds=bounds)
+        p = (second if second.success else first).x
+        for k, en in enumerate(order):
+            out[(group, en)] = float(p[k] - cells[k])
+        gaps = [p[k + 1] - p[k] - w[k] for k in range(n - 1)]
+        print(f"  menu {group}: gaps {', '.join(f'{g:.0f}' for g in gaps)} px")
+    return out
 
 
 def main(argv=None):
@@ -509,6 +584,18 @@ def main(argv=None):
             # again, all pictures of the entry: one size per group (that of the text that has to shrink
             # most, after squeezing it to min_sx) and one squeeze per word, the same in every state
             items = [r[0] for p in pictures for r in p[4]]
+            fixed = {}
+            if entry.get("same_fit"):
+                # one size, horizontal scale and baseline (in the box) per group: the median of the English
+                # texts' fits (a tail like that of Q makes a single text look larger), the scale at most max_sx
+                for g in {it.get("group") for it in items}:
+                    mine = [it for it in items if it.get("group") == g]
+                    fixed[g] = (float(np.median([it["_size"] for it in mine])),
+                                min(float(np.median([it["_sx"] for it in mine])), entry.get("max_sx", 1e9)),
+                                float(np.median([it["_y"] for it in mine])))
+                for it in items:
+                    size_g, sx_g, _ = fixed[it.get("group")]
+                    it["_fit"] *= it["_size"] * it["_sx"] / (size_g * sx_g)
             scale, squeeze = {}, {}
             for it in items:
                 g = it.get("group")
@@ -516,6 +603,9 @@ def main(argv=None):
             for it in items:
                 key = (it.get("group"), it["ru"])
                 squeeze[key] = min(squeeze.get(key, 1.0), it["_fit"] / scale[it.get("group")])
+            for g, factor in entry.get("menu", {}).get("scale", {}).items():
+                # smaller words (each squeezed as before) leave room to even out the gaps of a menu
+                scale[g] *= factor
             for p in pictures:
                 name, merged, orig = p[:3]
                 # one letter weight per column of a sheet (one button state), so that no word looks bolder
@@ -523,10 +613,29 @@ def main(argv=None):
                 for r in p[4]:
                     weight.setdefault(r[0]["box"][0], []).append(r[0]["_shift"])
                 p[3], p[4] = orig.copy(), []
+                p.append(weight)
                 for it in expand(merged):
                     key = (it.get("group"), it["ru"])
-                    render_item(fonts, {**it, "start_scale": scale[key[0]], "start_sx": squeeze[key],
+                    extra = dict(zip(("ru_size", "ru_sx", "ru_y"), fixed[key[0]])) if fixed else {}
+                    render_item(fonts, {**it, **extra, "start_scale": scale[key[0]], "start_sx": squeeze[key],
+                                        "start_tight": squeeze[key] < 1,
                                         "force_shift": float(np.median(weight[it["box"][0]]))}, p[3], orig, p[4])
+            if entry.get("menu"):
+                # once more, with every word placed for even gaps between the buttons
+                where = menu_positions([r[0] for p in pictures for r in p[4]], entry["menu"])
+                for p in pictures:
+                    name, merged, orig, weight = p[0], p[1], p[2], p[5]
+                    p[3], p[4] = orig.copy(), []
+                    for it in expand(merged):
+                        key = (it.get("group"), it["ru"])
+                        extra = dict(zip(("ru_size", "ru_sx", "ru_y"), fixed[key[0]])) if fixed else {}
+                        if (key[0], it["en"]) in where:
+                            extra["ink_left"] = where[(key[0], it["en"])]
+                        render_item(fonts, {**it, **extra, "start_scale": scale[key[0]], "start_sx": squeeze[key],
+                                            "start_tight": squeeze[key] < 1,
+                                            "force_shift": float(np.median(weight[it["box"][0]]))}, p[3], orig, p[4])
+            for p in pictures:
+                del p[5:]
         for name, merged, orig, out, report in pictures:
             dst = os.path.join(out_dir, *name.split("/")) + ".png"
             os.makedirs(os.path.dirname(dst), exist_ok=True)

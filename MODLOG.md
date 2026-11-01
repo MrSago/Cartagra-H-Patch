@@ -166,3 +166,20 @@ Single-player VN, no anti-cheat.
 - With Cyrillic in FONT1, the months, slider labels (Медленно/Быстро, Непрозрачно/Прозрачно, colour names, «0 сек/симв.» ...), «Версия игры» and «Авто» are translated; only «❝LUNA❞» stays English.
 - In game (user's OK; saves backed up to `backup/saves/GSE_4290390_2026-11-02_before_font_test/`, the replaced exe and FONT1 files to `backup/installed_before_font_test_2026-11-02/`): the game starts with the new fonts; Russian shown in the bottom bars (Options, Save, Load, Gallery, Music, Videos), all slider labels, «Версия игры 1.0.0.1», «Авто» and the save date «окт. 27, 2026». Only «Закрыть» ran off the right edge (the right box keeps the English left edge): `Close` -> «Назад», checked again. Colour slider: Yellow at both ends as in the original.
 - Afterwards: saves unchanged (compared with the backup), exe and FONT1 files restored to the build the user had installed. Tests: 36 pass with the integration test.
+
+## 2026-11-02 session 15: distorted labels (title ЗАГРУЗКА, system menu Б.СОХР./Б.ЗАГР.)
+
+- User's screenshots: ЗАГРУЗКА (title) and Б.СОХР./Б.ЗАГР. (system menu) look distorted.
+- Measured with the tool's report: ЗАГРУЗКА and МУЗЫКА squeezed to 0.75; Б.СОХР./Б.ЗАГР. stretched to 1.46/1.39 because "Q.SAVE"/"Q.LOAD" were fitted by height including Q's tail (26.6 px instead of ~34).
+- `tools/image_text.py`: `same_fit` (median size, scale and baseline per uniform group; the English is still erased with each item's own fit, otherwise a remnant of "Q.SAVE" stayed visible), `max_sx`, `tighten` (closer letters before squeezing). Title sheets: min_sx 0.9, tighten 0.04, same_fit; system menu: same_fit, max_sx 1.0, tighten 0.04, min_sx 0.9.
+- Result: system menu labels one size and baseline, not stretched; title words 0.68 of the English size (were 0.77), nothing squeezed below 0.9. Other pictures unchanged (re-rendered and compared; `datewin_text_en` differs between runs only in nearly transparent pixels).
+- Build OK, unit tests pass.
+- In game (user's OK; saves backed up to `backup/saves/GSE_4290390_2026-11-02_before_label_test/`, SYSCG.PAK and PARTS.PAK to `backup/installed_before_label_test_2026-11-02/`): system menu labels one size and baseline, Б.СОХР./Б.ЗАГР. like the others (normal, hover, disabled); title ЗАГРУЗКА same width (the cut width) but lower: width/height 5.7 instead of 5.0 (measured on screenshots), hover fine; all title words smaller. Afterwards: saves unchanged, both archives restored to the user's installed build.
+
+## 2026-11-02 session 16: even spacing of the title and Extras menus
+
+- User's screenshot: uneven gaps in the title menu (83, 71, 76, 132, 112 px at 1920 scale); the layout model (engine widths = English title_menu1 extents, 26 px gaps, centred) matches the screenshot within ~8 px.
+- `tools/image_text.py`: `menu` key: per group the screen order; word positions in the buttons from a linear program (scipy linprog: minimise the gap spread, then maximise the room to the button limits), applied in a third render pass to every state. Degenerate ranges (a word that fills its button) are pinned. `menu.scale` makes a group smaller after the squeeze is fixed (otherwise the squeezed words un-squeeze and stay pinned).
+- Title: words 0.9 of the previous size, gaps 104, 104, 111, 111, 111; Extras (Gallery, Music, Videos, Endings, Back): 0.95, gaps 92, 92, 92, 86. Exactly equal gaps would need 0.85 / 0.93.
+- Build OK, unit tests pass.
+- In game (user's OK; saves backed up to `backup/saves/GSE_4290390_2026-11-02_before_spacing_test/`, SYSCG.PAK to `backup/installed_before_spacing_test_2026-11-02/`): gaps measured on screenshots (1920 scale) title 106, 109, 115, 115, 118 (was 83, 71, 76, 132, 112), Extras 109, 109, 108, 102; words do not move on hover; baselines equal (900-901). The measured gaps are about 5-10 px wider than the model's (the faint glow edge is not counted as ink). Afterwards: saves unchanged, SYSCG.PAK restored.
