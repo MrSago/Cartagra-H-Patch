@@ -8,6 +8,7 @@ languages/<code>/
   translation/*.tsv    translations of restored lines, one table per restored scene (optional)
   interface.tsv        translation of the interface text in CARTAGRA.exe (optional)
   images/<archive>/<entry>.png   interface pictures to translate (optional; not in git)
+  images_text.json     the texts in the interface pictures and their translations, for tools/image_text.py (optional)
 _original_jp/          the scene tables with the Japanese release's text (see _original_jp/README.md)
 _original_steam/en/    the Steam release's English interface (see _original_steam/README.md)
 ```

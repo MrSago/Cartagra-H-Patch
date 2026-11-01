@@ -25,7 +25,7 @@ Technical details, file formats and reverse-engineering notes are in [TECHNICAL_
 | Edited pictures | 51 pictures that Steam edited (clothes added, blood, wounds and bodies hidden) are replaced by the originals |
 | Voices | 1,901 voice clips of the restored scenes |
 | Text | Restored lines use the language's translation tables, then the existing translation where the same line exists elsewhere in the game; lines with neither show the Japanese text |
-| Interface (Russian) | The menus, options, dialogs, music and ending titles that the Russian release left in English are translated into Russian (277 of 296 strings in `CARTAGRA.exe`; tested in game). Interface elements that are pictures stay English; you can replace them with your own (see [Translating the Interface](#translating-the-interface)) |
+| Interface (Russian) | The menus, options, dialogs, music and ending titles that the Russian release left in English are translated into Russian (277 of 296 strings in `CARTAGRA.exe`; tested in game). The interface pictures with text (title menu, tabs, system menu, buttons, labels, tagline) can be translated by a script from your own copy of the game (see [Interface pictures](#interface-pictures)); the manual pages stay English |
 
 The patch replaces these files of the game:
 
@@ -188,6 +188,7 @@ Limits of the game's fonts (found in game):
 
 - The interface font has no `«` and `»` (they show as blanks); use `❝` and `❞` (shown as “ ”), as the English text does.
 - The slider labels and the version number use a small font without Cyrillic letters: Russian text there is not shown. These strings stay English: `Slow`/`Fast`, `Solid`/`Clear`, `Auto`, the colour names of "Read Text Color" (`Orange`, `Yellow`, `Green`, `Blue`, `Purple`, `Red`), the scale labels of Text2 (`0 sec/char`, `0.1 sec/char`, `0 sec`..`3 sec`) and `Game Ver. `.
+- The save date on the save and load screens (`Oct. 27, 2026`) uses a font without Cyrillic letters too: a translated month showed as a blank (`. 27, 2026`). The month names stay English.
 - `BGM`, `SE` and `MOVIE` are not in the table: the same strings are names of script commands in the executable, so they stay English (the BGM volume label shows "BGM").
 
 The build copies the table to `build/<lang>/interface.tsv`. To translate the interface into another language, copy [languages/_original_steam/en/interface.tsv](languages/_original_steam/en/interface.tsv) (English only) to `languages/<code>/interface.tsv` and fill in the `translation` column.
@@ -196,7 +197,7 @@ The table fits only the `CARTAGRA.exe` of the Russian release (its checksum is i
 
 ### Interface pictures
 
-Some interface elements are pictures with English text: the title menu, the Extras headings and "Completion Rate", the logo with its tagline, the options tabs, the system menu, the in-game buttons, the SAVE/LOAD labels, the "Jump" indicators, the key names and the manual pages (134 pictures). The build does not change them unless you replace them. [languages/_original_steam/en/images.tsv](languages/_original_steam/en/images.tsv) lists them with what each one shows.
+Some interface elements are pictures with English text: the title menu, the Extras headings and "Completion Rate", the logo with its tagline, the options tabs, the system menu, the in-game buttons, the SAVE/LOAD labels, the headings of the save, load, quick load, options and system menu screens (drawn into their backgrounds), the scene date labels, the "Jump" indicators, the key names and the manual pages (140 pictures). The build does not change them unless you replace them. [languages/_original_steam/en/images.tsv](languages/_original_steam/en/images.tsv) lists them with what each one shows.
 
 To translate them:
 
@@ -208,9 +209,17 @@ To translate them:
 2. Edit the copies in `languages/ru/images/`. Keep their size in pixels and save them as 8-bit PNG (RGBA is best; transparency is kept). Leave `languages/_original_steam/en/images/` unchanged: the build compares against it.
 3. Build. Pictures that differ from the originals are written into their archives in `dist/<lang>/files/image/...`; install them like the other files. Unedited copies are skipped, so the patch stays the same until you change a picture.
 
+For Russian the interface pictures are made by a script instead of by hand. `languages/ru/images_text.json` lists every English text in them with its place and its translation, and `tools/image_text.py` renders the translations into copies of the originals:
+
+```bash
+python tools/image_text.py --language ru --fonts <folder with EBGaramond.ttf>
+```
+
+It fits the English text with the chosen font to the original lettering, measures the look (fill, outline, glow, shadow) around the letters, erases the English text and draws the Russian text at the same size and baseline with the same look. Done this way: the title menu (three sheets), the Extras headings, "Completion Rate", the "No." sign, the tagline (two logos and the title background), the options tabs, the system menu, the in-game buttons, the SAVE/LOAD side labels, the "Jump"/"Skip"/"Back" indicators, the five screen headings (ЗАПИСЬ, ЗАГРУЗКА, БЫСТРАЯ ЗАГРУЗКА, НАСТРОЙКИ, СИСТЕМНОЕ МЕНЮ) and the scene date labels («10 февраля») (28 pictures). The key names stay as they are: Russian keyboards have Latin key labels. The manual pages are not translated yet. The script needs Python packages that the build does not use (`pip install pillow numpy scipy opencv-python-headless`), [EB Garamond](https://github.com/google/fonts/tree/main/ofl/ebgaramond) (`EBGaramond[wght].ttf` saved as `EBGaramond.ttf`, SIL Open Font License) and Arial (Windows). `--compare <folder>` also writes sheets with the original, the English text as the script re-renders it, and the translation, for checking by eye.
+
 Any other picture of an archive can be replaced the same way: export it with `python -m cartagra_patch.cztool export <archive.PAK> <folder> <entry>` and put the edited PNG in `languages/<lang>/images/<archive>/`.
 
-Pictures are stored uncompressed (CZ0), so an archive grows (`PARTS.PAK` by about 0.5 MB for the options tabs); the Russian release already uses CZ0 pictures for its title menu. Tested in game with a recoloured `options_tab_en`. The PNG files are not committed to git (`.gitignore`): they are the game's art; `--export-images` makes them again from your own copy of the game.
+Pictures are stored uncompressed (CZ0), so an archive grows (`PARTS.PAK` from 56 MB to 91 MB, mostly for the five full-screen backgrounds with headings); the Russian release already uses CZ0 pictures for its title menu. Tested in game with a recoloured `options_tab_en`. The PNG files are not committed to git (`.gitignore`): they are the game's art; `--export-images` makes them again from your own copy of the game.
 
 ## Testing Status
 
@@ -223,7 +232,9 @@ Tested in game with the Russian release (2026-10-25 and 2026-10-26):
 
 Not tested yet: the other 21 restored scenes, a full playthrough, loading saves across installing the patch, the CG gallery, scene replay, and anything in English.
 
-Interface translation (2026-10-26): the start-up notice, all Options pages, the exit and back-to-title dialogs were checked in game; a replacement picture was shown in game. Not checked in game: the save and load dialogs, the voice collection, the music and ending titles (locked on a new profile). See [TECHNICAL_NOTES.md](TECHNICAL_NOTES.md#interface-text-and-images).
+Interface translation (2026-10-26): the start-up notice, all Options pages, the exit and back-to-title dialogs were checked in game; a replacement picture was shown in game. Not checked in game: the voice collection and the music and ending titles (locked on a new profile).
+
+Interface pictures (2026-11-02, in game): the title and Extras menus (all words whole, hover states), the options tabs, the system menu, both in-game button layouts (classic and touch), the screen headings, the save and load screens and the scene date label. Not seen in game: the "Jump" indicators with text, the SAVE/LOAD side labels and the `CONFIG_TAB1_en` tabs (not used by the PC layout seen here), the Extras subpages. See [TECHNICAL_NOTES.md](TECHNICAL_NOTES.md#interface-text-and-images).
 
 When you report a problem, give the scene name if you know it (for example `0208-13-01H`), what you saw, and whether the unpatched game behaves differently there.
 
@@ -238,7 +249,8 @@ When you report a problem, give the scene name if you know it (for example `0208
 - Before 2026-10-26 the patch did not update the read-text and choice records, so in restored scenes "Skip read text" skipped unread lines and chosen options were not remembered. Fixed and tested in game. The game writes this data only when you save (also quick save), not when you quit. It keeps this data in `%APPDATA%\GSE Saves\4290390\remote\data000.dat` (the bundled Steam emulator puts all saves there; the empty `userdata` folder in the game folder is not used). Back up that folder before installing a new build.
 - Chosen options are shown in another color only if **Options > Text1 > "Color of Previously Read Text"** is set to "Only Choices" (chosen options only, as in the Japanese release) or "On" (all read text). With "Off" the game still remembers your choices but doesn't mark them.
 - Slider labels, the version label and `BGM` stay English (see [Interface text](#interface-text)). Character names on the Voice page come from `PARAM.PAK` and are not translated.
-- Interface pictures (title menu, options tabs, system menu, in-game buttons, save screen labels, manual pages) are still in English. You can replace them; see [Interface pictures](#interface-pictures).
+- The manual pages and the key names are still in English. The other interface pictures are translated by `tools/image_text.py` (see [Interface pictures](#interface-pictures)). The title menu buttons are cut to the width of the English words, so the Russian words there are smaller, and the two squeezed ones (ЗАГРУЗКА, ВЫХОД) look a little lighter. The save and load headings must leave room for the slot number, so SAVE is ЗАПИСЬ and ЗАГРУЗКА is smaller than LOAD was.
+- The short scene date on the save and load screens (`Feb. 15`) is still English: it comes from a table in the scripts, not from a picture.
 - The English build has never been made or tested.
 - There is no installer.
 
@@ -254,6 +266,7 @@ The full list of known issues and open questions is in [TECHNICAL_NOTES.md](TECH
 | `languages/<lang>/` | Language settings, translation tables, the interface table and its pictures |
 | `languages/_original_jp/` | The original scene tables (Japanese release text), a basis for translations into other languages |
 | `languages/_original_steam/en/` | The Steam release's English interface: the interface table, the list of pictures with text and the exported pictures |
+| `tools/image_text.py` | Renders translated text into the interface pictures (see [Interface pictures](#interface-pictures)) |
 | `tests/` | Automated tests (`python tests/test_core.py`) |
 | `inputs/` | Your copies of the original game files (not in git) |
 | `build/` | Intermediate files (not in git) |

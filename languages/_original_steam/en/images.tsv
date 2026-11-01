@@ -20,11 +20,17 @@ resident/PARTS	save_bg_text_1280	SAVE label of the save screen (1280 wide)
 resident/PARTS	save_bg_text_1920	SAVE label of the save screen (1920 wide)
 resident/PARTS	load_bg_text_1280	LOAD label of the load screen (1280 wide)
 resident/PARTS	load_bg_text_1920	LOAD label of the load screen (1920 wide)
+resident/PARTS	save_bg	Save screen background with the SAVE heading
+resident/PARTS	load_bg	Load screen background with the LOAD heading
+resident/PARTS	qload_bg	Quick load screen background with the QUICK LOAD heading
+resident/PARTS	options_bg	Options background with the OPTIONS heading
+resident/PARTS	system_menu_bg	System menu background with the SYSTEM MENU heading
 resident/PARTS	INDICATOR_ICON_1280_en	Jump indicators (1280 wide)
 resident/PARTS	INDICATOR_ICON_1920_en	Jump indicators (1920 wide)
 resident/PARTS	pc_button_1280	Key names (1280 wide)
 resident/PARTS	pc_button_1920	Key names (1920 wide)
 resident/PARTS	pc_button_black_1280	Key names, dark (1280 wide)
 resident/PARTS	pc_button_black_1920	Key names, dark (1920 wide)
+OTHCG	datewin_text_en	Scene date labels (February 6th .. December 26th)
 MANUAL	en_*	Manual pages and keyboard help
 MANUAL_DECK	deck_en_*	Manual pages and help for Steam Deck

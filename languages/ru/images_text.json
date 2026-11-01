@@ -1,0 +1,288 @@
+{
+  "fonts": {
+    "serif": {"file": "EBGaramond.ttf", "weight": 400},
+    "sans": {"file": "arial.ttf"},
+    "sans_bold": {"file": "arialbd.ttf"}
+  },
+  "images": [
+    {
+      "image": "SYSCG/title_menu1", "font": "serif", "polarity": "dark", "min_sx": 0.75, "uniform": true, "keep_extent": true,
+      "copy_to": [
+        {"image": "SYSCG/title_menu2", "grid": {"x": [{"at": 0, "polarity": "light", "thr": 0.6}, {"at": 380, "polarity": "light", "thr": 0.8}, {"at": 760, "polarity": "light", "thr": 0.8}], "y": [0, 82, 164, 247, 328, 410, 492, 574, 656, 737, 820, 902], "box": [0, 0, 380, 82]}},
+        {"image": "SYSCG/title_menu3", "grid": {"x": [{"at": 0, "fit_from": [380, 0], "fill": "rows"}, 380, {"at": 760, "fit_from": [-380, 0]}], "y": [0, 82, 164, 247, 328, 410, 492, 574, 656, 737, 820, 902], "box": [0, 0, 380, 82]}}
+      ],
+      "grid": {"x": [{"at": 0, "fit_from": [760, 0], "fill": "texture"}, 380, 760], "y": [0, 82, 164, 247, 328, 410, 492, 574, 656, 737, 820, 902], "box": [0, 0, 380, 82]},
+      "words": [
+        {"en": "START", "ru": "НАЧАТЬ", "group": "title"},
+        {"en": "LOAD", "ru": "ЗАГРУЗКА", "group": "title"},
+        {"en": "OPTIONS", "ru": "НАСТРОЙКИ", "group": "title"},
+        {"en": "MANUAL", "ru": "СПРАВКА", "group": "title"},
+        {"en": "GALLERY", "ru": "ГАЛЕРЕЯ", "group": "extras"},
+        {"en": "MUSIC", "ru": "МУЗЫКА", "group": "extras"},
+        {"en": "MOVIES", "ru": "РОЛИКИ", "group": "extras"},
+        {"en": "ENDINGS", "ru": "КОНЦОВКИ", "group": "extras"},
+        {"en": "VIDEOS", "ru": "ВИДЕО", "group": "extras"},
+        {"en": "EXTRAS", "ru": "БОНУСЫ", "group": "title"},
+        {"en": "BACK", "ru": "НАЗАД", "group": "extras"},
+        {"en": "EXIT", "ru": "ВЫХОД", "group": "title"}
+      ]
+    },
+    {
+      "image": "SYSCG/title_extras", "font": "serif", "polarity": "dark", "bg": "inpaint", "radius": 4,
+      "items": [
+        {"box": [40, 0, 600, 34], "en": "EXTRAS", "ru": "БОНУСЫ"}
+      ]
+    },
+    {
+      "image": "SYSCG/extra_title", "font": "serif", "polarity": "light", "thr": 0.7, "bg": "inpaint", "radius": 5,
+      "grid": {"x": [0], "y": [0, 112, 224, 336, 448], "box": [0, 0, 400, 112]},
+      "words": [
+        ["GALLERY", "ГАЛЕРЕЯ"],
+        ["MUSIC", "МУЗЫКА"],
+        ["MOVIES", "РОЛИКИ"],
+        ["ENDINGS", "КОНЦОВКИ"],
+        ["VIDEOS", "ВИДЕО"]
+      ]
+    },
+    {
+      "image": "SYSCG/extra_pt2", "font": "serif", "polarity": "light", "align": "right",
+      "items": [
+        {"box": [0, 240, 560, 350], "en": "Completion Rate", "ru": "Пройдено"},
+        {"box": [0, 352, 560, 462], "en": "Total Completion Rate", "ru": "Пройдено всего"}
+      ]
+    },
+    {
+      "image": "SYSCG/graphic_pt", "font": "sans_bold", "polarity": "dark", "align": "center",
+      "items": [
+        {"box": [32, 678, 116, 741], "en": "No.", "ru": "№"}
+      ]
+    },
+    {
+      "image": "SYSCG/title_logo01_en", "font": "serif", "polarity": "dark", "bg": "inpaint", "radius": 14, "align": "center", "fit": "width", "size_scale": 0.9,
+      "items": [
+        {"box": [0, 244, 1280, 320], "en": "An affliction of the soul, in which love twists into obsession and madness.", "ru": "Недуг души, в котором любовь оборачивается одержимостью и безумием."}
+      ]
+    },
+    {
+      "image": "SYSCG/title_logo02_en", "font": "serif", "polarity": "dark", "bg": "inpaint", "radius": 14, "align": "center", "fit": "width", "size_scale": 0.9,
+      "items": [
+        {"box": [0, 246, 1272, 312], "en": "An affliction of the soul, in which love twists into obsession and madness.", "ru": "Недуг души, в котором любовь оборачивается одержимостью и безумием."}
+      ]
+    },
+    {
+      "image": "SYSCG/title_bg02_en", "font": "serif", "polarity": "light", "thr": 0.9, "bg": "inpaint", "radius": 5, "align": "center", "fit": "width", "size_scale": 0.9,
+      "items": [
+        {"box": [400, 530, 1520, 600], "en": "An affliction of the soul, in which love twists into obsession and madness.", "ru": "Недуг души, в котором любовь оборачивается одержимостью и безумием.", "fit_box": [420, 536, 1500, 590]}
+      ]
+    },
+    {
+      "image": "resident/PARTS/options_tab_en", "font": "sans", "polarity": "light", "thr": 0.45, "bg": "inpaint", "radius": 4, "align": "center", "pad": 12, "min_sx": 0.9, "uniform": true,
+      "copy_to": [
+        {"image": "resident/PARTS/options_tab_en_oc", "thr": 0.6, "radius": 12}
+      ],
+      "items": [
+        {"box": [0, 0, 150, 99], "en": "Basic", "ru": "Общие"},
+        {"box": [150, 0, 286, 99], "en": "Text1", "ru": "Текст1"},
+        {"box": [286, 0, 433, 99], "en": "Text2", "ru": "Текст2"},
+        {"box": [433, 0, 598, 99], "en": "Sound", "ru": "Звук"},
+        {"box": [598, 0, 745, 99], "en": "Voice", "ru": "Голос"},
+        {"box": [745, 0, 963, 99], "en": "Keyboard", "ru": "Клавиши"},
+        {"box": [963, 0, 1133, 99], "en": "Mouse", "ru": "Мышь"},
+        {"box": [1133, 0, 1292, 99], "en": "Touch", "ru": "Сенсор"},
+        {"box": [1292, 0, 1536, 99], "en": "System", "ru": "Система"}
+      ]
+    },
+    {
+      "image": "resident/PARTS/CONFIG_TAB1_en", "font": "sans", "polarity": "light", "thr": 0.45, "bg": "inpaint", "radius": 4, "align": "center", "pad": 12, "min_sx": 0.9, "uniform": true,
+      "items": [
+        {"box": [0, 0, 225, 66], "en": "OPTIONS", "ru": "НАСТРОЙКИ", "align": "left"},
+        {"box": [225, 0, 329, 66], "en": "Basic", "ru": "Общие"},
+        {"box": [329, 0, 459, 66], "en": "Button1", "ru": "Кнопки1"},
+        {"box": [459, 0, 598, 66], "en": "Button2", "ru": "Кнопки2"},
+        {"box": [598, 0, 713, 66], "en": "Touch", "ru": "Сенсор"},
+        {"box": [713, 0, 814, 66], "en": "Text1", "ru": "Текст1"},
+        {"box": [814, 0, 921, 66], "en": "Text2", "ru": "Текст2"},
+        {"box": [921, 0, 1041, 66], "en": "Sound", "ru": "Звук"},
+        {"box": [1041, 0, 1149, 66], "en": "Voice", "ru": "Голос"},
+        {"box": [1149, 0, 1280, 66], "en": "Color", "ru": "Цвет"}
+      ]
+    },
+    {
+      "image": "resident/PARTS/system_menu_icon", "font": "serif", "polarity": "light", "thr": 0.6, "fill": "rows", "bg": "inpaint", "radius": 6, "align": "center", "uniform": true, "pad": 6, "by": "col", "max_w": 205, "min_sx": 0.85, "erase_thr": 0.3,
+      "grid": {"x": [5, 265, 525, 785, 1045, 1305, 1565, 1825, 2085], "y": [0, {"at": 260, "fit_from": [0, -260]}, {"at": 520, "fit_from": [0, -520]}], "box": [0, 172, 250, 259]},
+      "words": [
+        ["SAVE", "СОХРАНИТЬ"],
+        ["LOAD", "ЗАГРУЗИТЬ"],
+        ["OPTIONS", "НАСТРОЙКИ"],
+        ["TITLE", "В МЕНЮ"],
+        ["Q.SAVE", "Б.СОХР."],
+        ["Q.LOAD", "Б.ЗАГР."],
+        ["MANUAL", "СПРАВКА"],
+        ["BACK", "НАЗАД"],
+        ["EXIT", "ВЫХОД"]
+      ]
+    },
+    {
+      "image": "resident/PARTS/legacy_pt_minimum", "font": "serif", "polarity": "light", "thr": 0.7, "uniform": true,
+      "grid": {"x": [3, 223, 443, 663, {"at": 883, "fit_from": [-220, 0]}], "y": [0, 52, 103, 155, 207, 260, 311, 363, 414, 467, 519, 571, 621], "box": [51, 0, 217, 52]},
+      "words": [
+        ["MENU", "МЕНЮ"],
+        ["REWIND", "ВОЗВРАТ"],
+        ["SKIP", "ПРОПУСК"],
+        ["AUTO", "АВТО"],
+        ["BACK", "НАЗАД"],
+        ["NEXT", "ВПЕРЁД"],
+        ["SAVE", "СОХР."],
+        ["LOAD", "ЗАГР."],
+        ["OPTIONS", "НАСТР."],
+        ["VOICE", "ГОЛОС"],
+        ["CLOSE", "СКРЫТЬ"],
+        ["LOG", "ЖУРНАЛ"],
+        ["EXIT", "ВЫХОД"]
+      ]
+    },
+    {
+      "image": "resident/PARTS/legacy_pt_full1", "font": "sans_bold", "polarity": "light", "thr": 0.6, "align": "center", "uniform": true, "by": "col",
+      "grid": {"x": [{"at": 0, "box_w": 55}, {"at": 55, "box_w": 46}, {"at": 101, "box_w": 54}, {"at": 155, "box_w": 50}, {"at": 205, "box_w": 49}, {"at": 254, "box_w": 60}, {"at": 314, "box_w": 46}], "y": [4, {"at": 58, "fit_from": [0, -54]}, {"at": 111, "fit_from": [0, -107]}, {"at": 165, "fit_from": [0, -161]}, {"at": 220, "fit_from": [0, -216]}], "box": [0, 30, 0, 50]},
+      "words": [
+        ["REWIND", "ВОЗВР."],
+        ["SKIP", "ПРОП."],
+        ["AUTO", "АВТО"],
+        ["SAVE", "СОХР."],
+        ["LOAD", "ЗАГР."],
+        ["OPTIONS", "НАСТР."],
+        ["EXIT", "ВЫХОД"]
+      ]
+    },
+    {
+      "image": "resident/PARTS/save_bg_text_1920", "font": "sans", "polarity": "light", "align": "center", "uniform": true, "pad": 20,
+      "items": [
+        {"box": [0, 233, 90, 621], "rotate": 90, "en": "SAVE", "ru": "ЗАПИСЬ"},
+        {"box": [1830, 233, 1920, 621], "rotate": -90, "en": "SAVE", "ru": "ЗАПИСЬ"},
+        {"box": [0, 622, 90, 1010], "rotate": 90, "en": "SAVE", "ru": "ЗАПИСЬ"},
+        {"box": [1830, 622, 1920, 1010], "rotate": -90, "en": "SAVE", "ru": "ЗАПИСЬ"}
+      ]
+    },
+    {
+      "image": "resident/PARTS/save_bg_text_1280", "font": "sans", "polarity": "light", "align": "center", "uniform": true, "pad": 14,
+      "items": [
+        {"box": [0, 156, 62, 414], "rotate": 90, "en": "SAVE", "ru": "ЗАПИСЬ"},
+        {"box": [1218, 156, 1280, 414], "rotate": -90, "en": "SAVE", "ru": "ЗАПИСЬ"},
+        {"box": [0, 416, 62, 674], "rotate": 90, "en": "SAVE", "ru": "ЗАПИСЬ"},
+        {"box": [1218, 416, 1280, 674], "rotate": -90, "en": "SAVE", "ru": "ЗАПИСЬ"}
+      ]
+    },
+    {
+      "image": "resident/PARTS/load_bg_text_1920", "font": "sans", "polarity": "light", "align": "center", "uniform": true, "pad": 20,
+      "items": [
+        {"box": [0, 232, 90, 620], "rotate": 90, "en": "LOAD", "ru": "ЗАГРУЗКА"},
+        {"box": [1830, 232, 1920, 620], "rotate": -90, "en": "LOAD", "ru": "ЗАГРУЗКА"},
+        {"box": [0, 621, 90, 1009], "rotate": 90, "en": "LOAD", "ru": "ЗАГРУЗКА"},
+        {"box": [1830, 621, 1920, 1009], "rotate": -90, "en": "LOAD", "ru": "ЗАГРУЗКА"}
+      ]
+    },
+    {
+      "image": "resident/PARTS/load_bg_text_1280", "font": "sans", "polarity": "light", "align": "center", "uniform": true, "pad": 14,
+      "items": [
+        {"box": [0, 155, 62, 413], "rotate": 90, "en": "LOAD", "ru": "ЗАГРУЗКА"},
+        {"box": [1218, 155, 1280, 413], "rotate": -90, "en": "LOAD", "ru": "ЗАГРУЗКА"},
+        {"box": [0, 415, 62, 673], "rotate": 90, "en": "LOAD", "ru": "ЗАГРУЗКА"},
+        {"box": [1218, 415, 1280, 673], "rotate": -90, "en": "LOAD", "ru": "ЗАГРУЗКА"}
+      ]
+    },
+    {
+      "image": "resident/PARTS/INDICATOR_ICON_1920_en", "font": "sans_bold", "polarity": "light", "thr": 0.6, "align": "center", "uniform": true, "min_sx": 0.8, "bg": "inpaint", "radius": 5,
+      "items": [
+        {"box": [57, 146, 172, 192], "en": "Jump", "ru": "Переход", "fit_box": [63, 146, 166, 192], "limit": [66, 163]},
+        {"box": [225, 146, 340, 192], "en": "Jump", "ru": "Переход", "fit_box": [231, 146, 334, 192], "limit": [234, 331]},
+        {"box": [393, 146, 508, 192], "en": "Jump", "ru": "Переход", "fit_box": [399, 146, 502, 192], "limit": [402, 499]},
+        {"box": [561, 146, 672, 192], "en": "Jump", "ru": "Переход", "fit_box": [567, 146, 670, 192], "limit": [570, 667]},
+        {"box": [57, 194, 172, 240], "en": "Jump", "ru": "Переход", "fit_box": [63, 194, 166, 240], "limit": [66, 163]},
+        {"box": [225, 194, 340, 240], "en": "Jump", "ru": "Переход", "fit_box": [231, 194, 334, 240], "limit": [234, 331]},
+        {"box": [393, 194, 508, 240], "en": "Jump", "ru": "Переход", "fit_box": [399, 194, 502, 240], "limit": [402, 499]},
+        {"box": [561, 194, 672, 240], "en": "Jump", "ru": "Переход", "fit_box": [567, 194, 670, 240], "limit": [570, 667]}
+      ]
+    },
+    {
+      "image": "resident/PARTS/INDICATOR_ICON_1280_en", "font": "sans_bold", "polarity": "light", "thr": 0.6, "align": "center", "uniform": true, "min_sx": 0.8, "bg": "inpaint", "radius": 5,
+      "items": [
+        {"box": [47, 0, 117, 31], "en": "Skip", "ru": "Пропуск", "fit_box": [53, 0, 111, 31], "limit": [56, 108]},
+        {"box": [159, 0, 229, 31], "en": "Skip", "ru": "Пропуск", "fit_box": [165, 0, 223, 31], "limit": [168, 220]},
+        {"box": [271, 0, 341, 31], "en": "Skip", "ru": "Пропуск", "fit_box": [277, 0, 335, 31], "limit": [280, 332]},
+        {"box": [383, 0, 448, 31], "en": "Skip", "ru": "Пропуск", "fit_box": [389, 0, 447, 31], "limit": [392, 444]},
+        {"box": [41, 32, 116, 63], "en": "Back", "ru": "Назад", "fit_box": [47, 32, 110, 63], "limit": [50, 107]},
+        {"box": [153, 32, 228, 63], "en": "Back", "ru": "Назад", "fit_box": [159, 32, 222, 63], "limit": [162, 219]},
+        {"box": [265, 32, 340, 63], "en": "Back", "ru": "Назад", "fit_box": [271, 32, 334, 63], "limit": [274, 331]},
+        {"box": [377, 32, 448, 63], "en": "Back", "ru": "Назад", "fit_box": [383, 32, 446, 63], "limit": [386, 443]},
+        {"box": [36, 97, 117, 127], "en": "Jump", "ru": "Переход", "fit_box": [42, 97, 111, 127], "limit": [45, 108]},
+        {"box": [148, 97, 229, 127], "en": "Jump", "ru": "Переход", "fit_box": [154, 97, 223, 127], "limit": [157, 220]},
+        {"box": [260, 97, 341, 127], "en": "Jump", "ru": "Переход", "fit_box": [266, 97, 335, 127], "limit": [269, 332]},
+        {"box": [372, 97, 448, 127], "en": "Jump", "ru": "Переход", "fit_box": [378, 97, 447, 127], "limit": [381, 444]},
+        {"box": [36, 129, 117, 159], "en": "Jump", "ru": "Переход", "fit_box": [42, 129, 111, 159], "limit": [45, 108]},
+        {"box": [148, 129, 229, 159], "en": "Jump", "ru": "Переход", "fit_box": [154, 129, 223, 159], "limit": [157, 220]},
+        {"box": [260, 129, 341, 159], "en": "Jump", "ru": "Переход", "fit_box": [266, 129, 335, 159], "limit": [269, 332]},
+        {"box": [372, 129, 448, 159], "en": "Jump", "ru": "Переход", "fit_box": [378, 129, 447, 159], "limit": [381, 444]}
+      ]
+    },
+    {
+      "image": "resident/PARTS/save_bg", "font": "serif", "polarity": "light", "thr": 0.85, "force_shift": -0.75, "bg": "inpaint", "radius": 10, "min_sx": 0.85,
+      "items": [
+        {"box": [0, 0, 400, 120], "en": "SAVE", "ru": "ЗАПИСЬ", "limit": [24, 240]}
+      ]
+    },
+    {
+      "image": "resident/PARTS/load_bg", "font": "serif", "polarity": "light", "thr": 0.85, "force_shift": -0.75, "bg": "inpaint", "radius": 10, "min_sx": 0.85,
+      "items": [
+        {"box": [0, 0, 400, 120], "en": "LOAD", "ru": "ЗАГРУЗКА", "limit": [24, 240]}
+      ]
+    },
+    {
+      "image": "resident/PARTS/qload_bg", "font": "serif", "polarity": "light", "thr": 0.85, "force_shift": -0.75, "bg": "inpaint", "radius": 10, "min_sx": 0.85,
+      "items": [
+        {"box": [0, 0, 400, 120], "en": "QUICK LOAD", "ru": "БЫСТРАЯ ЗАГРУЗКА", "limit": [24, 390]}
+      ]
+    },
+    {
+      "image": "resident/PARTS/options_bg", "font": "serif", "polarity": "light", "thr": 0.85, "force_shift": -0.75, "bg": "inpaint", "radius": 10, "min_sx": 0.85,
+      "items": [
+        {"box": [0, 0, 400, 120], "en": "OPTIONS", "ru": "НАСТРОЙКИ", "limit": [20, 345]}
+      ]
+    },
+    {
+      "image": "resident/PARTS/system_menu_bg", "font": "serif", "polarity": "light", "thr": 0.85, "force_shift": -0.75, "bg": "inpaint", "radius": 10, "min_sx": 0.85,
+      "items": [
+        {"box": [0, 0, 800, 120], "en": "SYSTEM MENU", "ru": "СИСТЕМНОЕ МЕНЮ", "limit": [19, 760]}
+      ]
+    },
+    {
+      "image": "OTHCG/datewin_text_en", "font": "sans", "polarity": "light",
+      "grid": {"x": [0], "y": [0, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1050, 1100, 1150], "box": [0, 0, 352, 50]},
+      "words": [
+        ["February 6th", "6 февраля"],
+        ["February 7th", "7 февраля"],
+        ["February 8th", "8 февраля"],
+        ["February 9th", "9 февраля"],
+        ["February 10th", "10 февраля"],
+        ["February 13th", "13 февраля"],
+        ["February 14th", "14 февраля"],
+        ["February 15th", "15 февраля"],
+        ["February 16th", "16 февраля"],
+        ["February 17th", "17 февраля"],
+        ["February 18th", "18 февраля"],
+        ["February 19th", "19 февраля"],
+        ["February 20th", "20 февраля"],
+        ["February 21st", "21 февраля"],
+        ["February 22nd", "22 февраля"],
+        ["February 23rd", "23 февраля"],
+        ["March 10th", "10 марта"],
+        ["December 3rd", "3 декабря"],
+        ["December 10th", "10 декабря"],
+        ["December 11th", "11 декабря"],
+        ["December 23rd", "23 декабря"],
+        ["December 24th", "24 декабря"],
+        ["December 25th", "25 декабря"],
+        ["December 26th", "26 декабря"]
+      ]
+    }
+  ]
+}

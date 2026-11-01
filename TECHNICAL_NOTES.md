@@ -444,9 +444,11 @@ The executable must not be signed or have an overlay, and must not already have 
 - the slider labels (`Slow`/`Fast`, `Solid`/`Clear`, `Auto`, the colour names of "Read Text Color" (`Orange`, `Yellow`, `Green`, `Blue`, `Purple`, `Red`), the scale labels of Text2 (`0 sec/char`, `0.1 sec/char`, `0 sec`..`3 sec`)) and the version label use a small font without Cyrillic: Russian text there showed as blanks or as `0 /`. They stay English;
 - not reached: save/load dialogs, the voice collection, music and ending titles (locked on a new profile), the months on the save screen.
 
+**[V]** In game (2026-10-31): the save date on the save and load screens (`%s %d, %04d`) uses a font without Cyrillic; the translated month showed as a blank (`. 31, 2026`). The 12 month names stay English. **[V]** 2026-11-02: `Oct. 27, 2026` shown. The load-confirmation dialog shows its Russian text.
+
 ### Interface pictures
 
-**[V]** These pictures contain English text (exported and looked at); `languages/_original_steam/en/images.tsv` lists them (134 pictures with the manual pages) and `build.py --export-images` exports them:
+**[V]** These pictures contain English text (exported and looked at); `languages/_original_steam/en/images.tsv` lists them (140 pictures with the manual pages) and `build.py --export-images` exports them:
 
 | Archive (`files/image/`) | Entries | What they show |
 | --- | --- | --- |
@@ -459,11 +461,26 @@ The executable must not be signed or have an overlay, and must not already have 
 | `resident/PARTS.PAK` | `save_bg_text_*`, `load_bg_text_*` (CZ1, palette) | SAVE and LOAD labels |
 | `resident/PARTS.PAK` | `INDICATOR_ICON_*_en` (CZ1, palette) | "Jump" indicators |
 | `resident/PARTS.PAK` | `pc_button_*` (CZ1) | Key names |
+| `resident/PARTS.PAK` | `save_bg`, `load_bg`, `qload_bg`, `options_bg`, `system_menu_bg` (1920×1080 backgrounds) | Screen headings SAVE, LOAD, QUICK LOAD, OPTIONS, SYSTEM MENU (found in game 2026-10-31; the `save_bg_text_*`/`load_bg_text_*` labels are not shown in the PC layout) |
+| `OTHCG.PAK` | `datewin_text_en` | Scene date labels (February 6th .. December 26th, 24 rows of 50 px) shown at the top left of a scene; `day_*` are Japanese only |
 | `MANUAL.PAK`, `MANUAL_DECK.PAK` | `en_manual*`, `en_help*`, `deck_en_*` (CZ1) | Manual pages |
 
 **[V]** `resident/PARTS.PAK` has the bytes `PARTS/\0` between the index and the first entry name, and the engine looks its pictures up as `PARTS/<name>`. `lucapak` used to drop them when rewriting an archive (the only Steam archive with such a prefix); the rewritten archive then crashed the game when the options screen opened. `LucaPak.name_prefix` now keeps them: all Steam UI archives and `SCRIPT.PAK` round-trip byte for byte.
 
 **[V]** The engine loads CZ0 (64-byte header and raw RGBA rows) wherever another CZ type is expected: the Russian release replaced the Japanese `title_menu1`/`title_menu2` (CZ1) by CZ0 pictures, and they are shown. The build therefore writes replacement pictures as CZ0 (`cztool.encode_cz0`), keeping the original header's placement fields (offset, visible size, canvas). The stored width is rounded up to a multiple of 8 (for example 1144 for a visible width of 1140); exported PNGs have the stored size, and the build requires the same size. **[V]** In game: a recoloured `options_tab_en` (CZ1 in the original) written as CZ0 into `PARTS.PAK` was shown on the options screen. `cztool` now decodes CZ0 too and reads PNGs (8-bit, non-interlaced, all colour types, all filters).
+
+**[V]** Translated pictures (`tools/image_text.py`, `languages/ru/images_text.json`). For each English text in a box:
+
+1. The letters of the original are found by a threshold on alpha × luminance (light letters) or alpha × (1 − luminance) (dark letters). The English text is rendered with the chosen font (4× supersampled) and fitted to them: size from their height and horizontal scale from their width, or (`"fit": "width"`, long mixed-case lines) size from the width, optionally smaller with letter spacing making up the width; then the position is refined by correlation (±1.5 px).
+2. The original look is measured as a premultiplied layer over the background as a function of the signed distance to the edge of the original letters (0.25 px bins, at least 8 pixels per bin): per bin, a least-squares fit of colour and alpha so that original = layer over background. On a black background the alpha is free, so it is set to cover the colour. Optionally the inside of the letters is measured per row (vertical gradient, `"fill": "rows"`) or per pixel, spread from the original letters (grunge texture, `"fill": "texture"`). The font's letters are thickened or thinned (±1.5 px) to the area of the original letters.
+3. The English text is erased: the box is cleared (transparent sheets), or the letters and their effect are filled in from the surroundings (OpenCV Telea; the alpha of the fill is sharpened so that it does not leave a half-transparent haze where an icon meets transparency, and the effect is limited to the erased radius).
+4. The translation is drawn at the same size and baseline, keeping the left/centre/right edge, squeezed to 0.85-0.92 and then reduced until it fits the box (or `limit`/`max_w`); `"uniform"` gives all texts of a picture the size of the one reduced most. Vertical labels are rendered in a turned box.
+
+Checked by re-rendering the English text the same way and comparing with the original (comparison sheets), then by eye. The built archives decode to exactly the rendered PNGs.
+
+**[V]** In game (user's screenshot, 2026-10-31): the title menu is laid out horizontally and **each item is cut to the width the original English item covered** (its alpha extent in the 380-px cell: START 200, LOAD 185, OPTIONS 275, MANUAL 270, EXTRAS 237, EXIT 160 px), centred with a gap of about 26 px; the first Russian sheets (words up to about 345 px) were cut off (НАЧАТ, ЗАГРУ, НАСТРОЙ, БОНУСЬ, ВЫХО). The widths are not taken from the replaced sheets and are not a table in `CARTAGRA.exe`, `SCRIPT.PAK` or `PARAM.PAK` (searched as int16/int32/float, any stride up to 64, any constant offset, also at 1280 scale); where the engine gets them is unknown. The menu words are therefore fitted into those widths (`"keep_extent"`): one size per screen (title screen: about 0.8 of the English size, ЗАГРУЗКА squeezed to 0.75; Extras screen: nearly full size) and one squeeze per word in all three sheets, so that a word does not change size between button states.
+
+**[V]** In game (2026-11-02, window 1280×720): the title and Extras menus show every word whole, also in the hover state; the options tabs, the system menu labels and both in-game button layouts (classic `legacy_pt_full1`, touch `legacy_pt_minimum`) are not cut. The headings drawn into the screen backgrounds share their space with other elements: on the save and load screens the slot number (`No.17`, right-aligned, up to three digits) starts at about x 265 (1920 scale), so the heading must end by x 240 (SAVE became ЗАПИСЬ; СОХРАНЕНИЕ would be about half size); the options heading must leave the gap to the first tab (ends by x 345); the quick load screen has no slot number. The scene date label (`datewin_text_en`) shows «10 февраля». The short date on the save screen (`Feb. 15`) is a table in the scripts (each scene name with the Japanese date, for example `二月六日`, and the English `Feb. 6`, UTF-16), not a picture.
 
 ## EVENTCG.PAK Comparison
 
@@ -571,6 +588,8 @@ Refactored on 2026-10-26 so the project no longer depends on the game installati
 | `languages/_original_jp/` | Scene tables with the Japanese release's text (basis for new languages) | yes |
 | `languages/_original_steam/en/` | Steam release interface originals: `interface.tsv`, `images.tsv` (pictures with text); `images/` (exported PNGs) | tables yes, PNGs no |
 | `cartagra_patch/images.py` | Interface pictures: list, export, copying to a language, changed pictures | yes |
+| `languages/ru/images_text.json` | The English texts in the interface pictures with their boxes and translations | yes |
+| `tools/image_text.py` | Renders the translations into the pictures (needs Pillow, numpy, scipy, OpenCV; not used by the build) | yes |
 | `tests/test_core.py` | Automated tests (standard library `unittest`) | yes |
 | `inputs/<set>/files/` | Local copies of the original files | no |
 | `build/<name>/staging/`, `build/<name>/translation/` | Archives while being written; the translation tables in the current format | no |
@@ -659,7 +678,7 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 9. `_scr_label` is not updated for the ported scenes (**[H]** debug data only).
 10. 21 of the 24 restored scenes have not been played in game.
 11. Read lines and chosen options are written to disk only when saving (game behaviour; see [Read Flags and Saves](#read-flags-and-saves)).
-12. Interface: slider labels, the version label and `BGM`/`SE`/`MOVIE` stay English; character names on the Voice page (`PARAM.PAK` `_voice_param`) are not translated; interface pictures are English unless replaced. The save/load dialogs, the voice collection and the music and ending titles have not been seen in game.
+12. Interface: slider labels, the version label and `BGM`/`SE`/`MOVIE` stay English; character names on the Voice page (`PARAM.PAK` `_voice_param`) are not translated; the manual pages and the key names are English; the translated interface pictures have not been seen in game. The save/load dialogs, the voice collection and the music and ending titles have not been seen in game.
 
 ## Open Questions
 
@@ -673,7 +692,7 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 1. Check the added Russian lines in game; proofread them (see [Text for the Russian slot](#text-for-the-russian-slot)).
 2. Play through the remaining 21 restored scenes; test saves and loads.
 3. Investigate the gallery and replay data so restored CGs and scenes are listed.
-4. Translate the text inside restored CG images and the interface pictures (replacement PNGs in `languages/<lang>/images/` are supported; the pictures themselves are not made yet).
+4. Translate the text inside restored CG images and the manual pages (`MANUAL`, `MANUAL_DECK`); the other interface pictures are translated (`tools/image_text.py`).
 5. Get the English Steam files, record their checksums in `definitions/inputs.json`, build `en` and test it.
 6. An installer with version checks and rollback.
 

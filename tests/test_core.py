@@ -530,9 +530,10 @@ class ExeTextTests(unittest.TestCase):
         self.assertTrue(original and not any(r["translation"] for r in original))
         ru = exe_text.load_table(project.load_language("ru")["interface_table"])
         self.assertEqual([r["id"] for r in ru], [r["id"] for r in original])
-        # kept in English: slider labels drawn with a small font that has no Cyrillic, and a song title
+        # kept in English: slider labels and the save-screen months drawn with fonts that have no Cyrillic, and a song title
         small_font = {"0 sec", "0 sec/char", "0.1 sec/char", "1 sec", "2 sec", "3 sec", "Auto", "Blue", "Clear", "Fast",
-                      "Game Ver. ", "Green", "Orange", "Purple", "Red", "Slow", "Solid", "Yellow", "❝LUNA❞"}
+                      "Game Ver. ", "Green", "Orange", "Purple", "Red", "Slow", "Solid", "Yellow", "❝LUNA❞",
+                      "Jan.", "Feb.", "Mar.", "Apr.", "May", "Jun.", "Jul.", "Aug.", "Sept.", "Oct.", "Nov.", "Dec."}
         self.assertEqual({r["original"] for r in ru if not r["translation"]}, small_font)
         self.assertEqual(exe_text.check_table(pe, original, refs), [])
         self.assertEqual(exe_text.check_table(pe, ru, refs), [])
@@ -682,7 +683,7 @@ class IntegrationTests(unittest.TestCase):
     """
 
     def test_ru_build_is_reproducible_and_leaves_inputs_alone(self):
-        from cartagra_patch import pipeline
+        from cartagra_patch import images, pipeline
         lang = project.load_language("ru")
         manifest = project.load_manifest()
         dirs = {"jp-fhd": os.path.join(project.INPUTS_DIR, "jp-fhd", "files"),
@@ -716,8 +717,11 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(sp.calls_to(script["0000-op1"], "0000-op0_HD"), 1)
         self.assertEqual(sp.calls_to(script["0308-02-00"], "0000-op0_HD"), 0)
         self.assertEqual(sp.rebuild_arflag(script["_arflag"], [e.name for e in entries], entries)[1], [])  # every script has a correct record
-        self.assertEqual({k: v for k, v in files[1].items() if k != "SCRIPT.PAK"},
-                         {k: v for k, v in REFERENCE_RU.items() if k != "SCRIPT.PAK"})
+        # the archives of the translated pictures (languages/ru/images/, not in git) are added
+        pictures = {f"image/{archive}.PAK" for archive in images.changed_images(lang)}
+        self.assertLessEqual(pictures, set(files[1]))
+        self.assertEqual({k: v for k, v in files[1].items() if k != "SCRIPT.PAK" and k not in pictures},
+                         {k: v for k, v in REFERENCE_RU.items() if k != "SCRIPT.PAK" and k not in pictures})
         for set_name, folder in dirs.items():
             self.assertEqual(project.check_inputs(set_name, folder, manifest, log=quiet), [])
         self.assertEqual(mtimes, {d: os.path.getmtime(os.path.join(d, "SCRIPT.PAK")) for d in dirs.values()})
