@@ -104,6 +104,39 @@ def make_exe():
     return bytes(data)
 
 
+FONT_PALETTE = b"".join(bytes((255, 255, 255, i)) for i in range(256))
+
+
+def make_cz2(idx, w, h):
+    return cztool.encode_cz2(b"CZ2\0" + struct.pack("<IHHHHH", 18, w, h, 8, 4, 0), FONT_PALETTE, w, h, idx)
+
+
+def make_font_set(folder, group, size, glyphs):
+    """FONTn__INFO.PAK (info<size>) and FONTn_<face>.PAK ("F<size>") with `glyphs` ({char: (left, width)}):
+    glyph k + 1 is a filled box of that width in its cell."""
+    from cartagra_patch import fonts
+    cell = size + 1
+    info = struct.pack("<4H", size, size + 1, 100, len(glyphs) + 1) + bytes((0, size, 0))
+    table, widths = [0] * 65536, [0] * 65536
+    for k, (c, (left, width)) in enumerate(glyphs.items()):
+        info += bytes((left, width, size // 9))
+        table[ord(c)], widths[ord(c)] = k + 1, width << 8 | left
+    info += struct.pack("<65536H", *table) + struct.pack("<65536H", *widths)
+    w, h = 100 * cell + 8, cell + 1
+    idx = bytearray(w * h)
+    for k, (_, (_, width)) in enumerate(glyphs.items()):
+        for y in range(2, size - 2):
+            idx[y * w + (k + 1) * cell + 1 : y * w + (k + 1) * cell + width - 1] = b"\xff" * (width - 2)
+    os.makedirs(folder, exist_ok=True)
+    pak = make_pak([])
+    pak.entries.append(Entry(f"info{size}", info, b"", {SEC_PARENT: b"\0\0", SEC_HASH: b"\0" * 8}))
+    pak.write(os.path.join(folder, f"{group}__INFO.PAK"))
+    for face in fonts.FACES:
+        pak = make_pak([])
+        pak.entries.append(Entry(f"F{size}", make_cz2(bytes(idx), w, h), b"", {SEC_PARENT: b"\0\0", SEC_HASH: b"\0" * 8}))
+        pak.write(os.path.join(folder, f"{group}_{face}.PAK"))
+
+
 def make_cz4(rgba, w, h, blocks=2):
     """CZ4 file for an RGBA image: delta-coded RGB plane + alpha plane, LZW in `blocks` blocks."""
     band = -(-h // 3)
@@ -300,6 +333,57 @@ class CzToolTests(unittest.TestCase):
         self.assertEqual(out[:8], base[:8])
         self.assertEqual(out[8:12], bytes([200, 200, 200, 255]))
         self.assertEqual(out[12:16], bytes([10, 20, 30, 255]))
+
+    def test_cz2_roundtrip(self):
+        rnd = random.Random(2)
+        w, h = 300, 200
+        # runs and noise: enough distinct strings for 18-bit codes (dictionary beyond 0x8000)
+        idx = bytes(rnd.choice((0, 0, 0, 255, rnd.randrange(256))) for _ in range(w * h))
+        data = make_cz2(idx, w, h)
+        hd, palette, out = cztool.decode_cz2(data)
+        self.assertEqual((hd["width"], hd["height"], palette, out), (w, h, FONT_PALETTE, idx))
+        self.assertEqual(cztool.decode_cz2(data, rows=3)[2], idx[: 3 * w])
+        self.assertEqual(cztool.decode(data)[1][4 * 5 : 4 * 6], FONT_PALETTE[4 * idx[5] : 4 * idx[5] + 4])
+        self.assertEqual(cztool.encode_cz2(data, palette, w, h, out), data)
+
+    def test_cz2_blocks(self):
+        # a block ends when its dictionary is full; the next block starts with a new dictionary
+        saved = cztool.CZ2_MAX_CODES
+        try:
+            cztool.CZ2_MAX_CODES = 500
+            rnd = random.Random(3)
+            idx = bytes(rnd.randrange(4) for _ in range(20000))
+            data = make_cz2(idx, 200, 100)
+        finally:
+            cztool.CZ2_MAX_CODES = saved
+        self.assertGreater(struct.unpack_from("<I", data, 18 + 1024)[0], 1)
+        self.assertEqual(cztool.decode_cz2(data)[2], idx)
+
+
+class FontTests(unittest.TestCase):
+    def test_add_glyphs(self):
+        from cartagra_patch import fonts
+        from cartagra_patch.lucapak import LucaPak as Pak
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "in", fonts.FONT_DIR)
+            make_font_set(src, "FONT0", 44, {"A": (0, 36), "Б": (7, 29), "ж": (4, 40)})
+            make_font_set(src, "FONT1", 22, {"A": (0, 18)})
+            out = os.path.join(tmp, "out")
+            self.assertEqual(fonts.add_glyphs(os.path.join(tmp, "in"), out, "Бж", log=quiet), 2)
+            info = fonts.FontInfo(Pak.read(os.path.join(out, fonts.FONT_DIR, "FONT1__INFO.PAK")).entries[0].data)
+            self.assertEqual((info.glyph[ord("A")], info.glyph[ord("Б")], info.glyph[ord("ж")]), (1, 2, 3))
+            self.assertEqual(info.cells[2], (4, 14, 2))  # left and width halved, letter spacing as in FONT1's "A"
+            self.assertEqual(info.width[ord("Б")], 14 << 8 | 4)
+            for face in fonts.FACES:
+                sheet = Pak.read(os.path.join(out, fonts.FONT_DIR, f"FONT1_{face}.PAK")).entries[0]
+                hd, _, idx = cztool.decode_cz2(sheet.data)
+                self.assertEqual((hd["width"], hd["height"]), (100 * 23 + 8, 24))
+                row = idx[11 * hd["width"] : 12 * hd["width"]]
+                self.assertTrue(row[2 * 23 + 3] > 200 and row[2 * 23 + 18] < 50)  # Б: box about 14 px wide
+                self.assertTrue(row[3 * 23 + 3] > 200 and row[3 * 23 + 17] > 200)  # ж: about 20 px
+            self.assertEqual(fonts.add_glyphs(os.path.join(tmp, "in"), os.path.join(tmp, "out2"), "A", log=quiet), 0)
+            with self.assertRaises(ValueError):
+                fonts.add_glyphs(os.path.join(tmp, "in"), out, "Ы", log=quiet)
 
 
 class CzReplacementTests(unittest.TestCase):
@@ -530,11 +614,8 @@ class ExeTextTests(unittest.TestCase):
         self.assertTrue(original and not any(r["translation"] for r in original))
         ru = exe_text.load_table(project.load_language("ru")["interface_table"])
         self.assertEqual([r["id"] for r in ru], [r["id"] for r in original])
-        # kept in English: slider labels and the save-screen months drawn with fonts that have no Cyrillic, and a song title
-        small_font = {"0 sec", "0 sec/char", "0.1 sec/char", "1 sec", "2 sec", "3 sec", "Auto", "Blue", "Clear", "Fast",
-                      "Game Ver. ", "Green", "Orange", "Purple", "Red", "Slow", "Solid", "Yellow", "❝LUNA❞",
-                      "Jan.", "Feb.", "Mar.", "Apr.", "May", "Jun.", "Jul.", "Aug.", "Sept.", "Oct.", "Nov.", "Dec."}
-        self.assertEqual({r["original"] for r in ru if not r["translation"]}, small_font)
+        # kept in English: a song title (the labels drawn with the small font FONT1 get Cyrillic from font_glyphs)
+        self.assertEqual({r["original"] for r in ru if not r["translation"]}, {"❝LUNA❞"})
         self.assertEqual(exe_text.check_table(pe, original, refs), [])
         self.assertEqual(exe_text.check_table(pe, ru, refs), [])
 
@@ -683,7 +764,7 @@ class IntegrationTests(unittest.TestCase):
     """
 
     def test_ru_build_is_reproducible_and_leaves_inputs_alone(self):
-        from cartagra_patch import images, pipeline
+        from cartagra_patch import fonts, images, pipeline
         lang = project.load_language("ru")
         manifest = project.load_manifest()
         dirs = {"jp-fhd": os.path.join(project.INPUTS_DIR, "jp-fhd", "files"),
@@ -719,6 +800,9 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(sp.rebuild_arflag(script["_arflag"], [e.name for e in entries], entries)[1], [])  # every script has a correct record
         # the archives of the translated pictures (languages/ru/images/, not in git) are added
         pictures = {f"image/{archive}.PAK" for archive in images.changed_images(lang)}
+        # and the small fonts with the added letters
+        if lang.get("font_glyphs"):
+            pictures |= {f for f in fonts.input_files() if os.path.basename(f).startswith(fonts.TARGET)}
         self.assertLessEqual(pictures, set(files[1]))
         self.assertEqual({k: v for k, v in files[1].items() if k != "SCRIPT.PAK" and k not in pictures},
                          {k: v for k, v in REFERENCE_RU.items() if k != "SCRIPT.PAK" and k not in pictures})

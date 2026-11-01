@@ -28,6 +28,7 @@ import struct
 
 from . import cztool
 from . import exe_text
+from . import fonts
 from . import lucascript as ls
 from . import script_port as sp
 from .images import changed_images, language_images, reference_png
@@ -342,6 +343,11 @@ def _build_interface(log, opt, work, staging, files_out):
         images += replaced
         log(f"  {arch}.PAK: {replaced} pictures replaced ({os.path.getsize(out):,} bytes)")
     log(f"  pictures: {images} replaced, {copies - images} unchanged copies of the originals skipped")
+    if lang.get("font_glyphs"):
+        try:
+            fonts.add_glyphs(opt.target_dir, files_out, lang["font_glyphs"], log=log)
+        except (OSError, ValueError) as e:
+            raise BuildError(f"font_glyphs: {e}") from None
     return translated, images
 
 

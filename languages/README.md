@@ -25,6 +25,7 @@ _original_steam/en/    the Steam release's English interface (see _original_stea
 | `status_note` | One sentence on what is missing or unverified, shown by the build and in `BUILD_INFO.txt` |
 | `placeholder` | What untranslated lines show |
 | `interface_original` | Optional. Folder below `languages/` with the originals of the target release's interface (`_original_steam/en`): `build.py --export-images` writes the pictures there, and the build replaces only pictures that differ from them |
+| `font_glyphs` | Optional. Letters to copy from the game's large fonts (FONT0) into its small interface fonts (FONT1), which have Latin letters only; needed when translated labels drawn with FONT1 (bottom bar, slider labels, save date) use other letters. The build then writes `files/font_win32_1920/FONT1__INFO.PAK` and `FONT1_*.PAK` |
 
 The table formats are described in the main README: [scene tables](../README.md#translating-the-restored-scenes), [interface table and pictures](../README.md#translating-the-interface). The build reads the files here and writes copies of the tables in the current format to `build/<code>/`; it never writes into this folder.
 

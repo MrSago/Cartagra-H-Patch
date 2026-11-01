@@ -161,6 +161,102 @@
           "size": 22243328,
           "entries": 440,
           "sha256": "1c59a83f86ab55279cb8d9628d1d882a9871950205e930e71537778dc461c275"
+        },
+        "font_win32_1920/FONT0__INFO.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)",
+          "size": 1710080,
+          "entries": 6,
+          "sha256": "e67218f8679c958bc6ef7f4172993083216521a4fe9402d0ac5a21a52925d510"
+        },
+        "font_win32_1920/FONT1__INFO.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)",
+          "size": 1331200,
+          "entries": 5,
+          "sha256": "8809402e2f33013f172241746178a2ac43c29fb8579dffa03c7878089708abf2"
+        },
+        "font_win32_1920/FONT0_GOTHIC1.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)",
+          "size": 13131776,
+          "entries": 6,
+          "sha256": "4054263dbead457e923490e4b3810e1cb931f2c916a3bc2c9a61f6562c131246"
+        },
+        "font_win32_1920/FONT0_GOTHIC2.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)",
+          "size": 17778688,
+          "entries": 6,
+          "sha256": "9203a76b11586e16ad9435251e489ba534433cde6678689a56e286022edbe865"
+        },
+        "font_win32_1920/FONT0_GOTHIC3.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)",
+          "size": 16949248,
+          "entries": 6,
+          "sha256": "0937172a1c621b948c3da33934468e8812fa771aa46671e6d99fd9ee86cba77e"
+        },
+        "font_win32_1920/FONT0_MINCHO.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)",
+          "size": 16805888,
+          "entries": 6,
+          "sha256": "9e2c27267c23fa9c64cef44561e9a61d58ec51fdda5b5bbe9a911d12d8602ae8"
+        },
+        "font_win32_1920/FONT0_MODERN.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)",
+          "size": 15595520,
+          "entries": 6,
+          "sha256": "6cdc87d0727756cce24a7522469dd1412ff1e114bd93d485eb6093a4749cb2f1"
+        },
+        "font_win32_1920/FONT1_GOTHIC1.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)",
+          "size": 2119680,
+          "entries": 5,
+          "sha256": "60c5015c9ff604fd0052cf37fda7cb75ea5d3355741d1b5b0636a288fd623115"
+        },
+        "font_win32_1920/FONT1_GOTHIC2.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)",
+          "size": 2656256,
+          "entries": 5,
+          "sha256": "cd6fb870541da518577913832de7c40c76790f1cbf2c2f14991cfce9069bc802"
+        },
+        "font_win32_1920/FONT1_GOTHIC3.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)",
+          "size": 2639872,
+          "entries": 5,
+          "sha256": "418e45caa95e8c86a94004c1792c97edfcb05ae4e8526f3a93fd2e3e24c4cab9"
+        },
+        "font_win32_1920/FONT1_MINCHO.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)",
+          "size": 2318336,
+          "entries": 5,
+          "sha256": "4f3a5dad66d1b04e3b6064090383f949ca7464ac07c1c29eb2c125393e3247d8"
+        },
+        "font_win32_1920/FONT1_MODERN.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)",
+          "size": 2351104,
+          "entries": 5,
+          "sha256": "e372c6a51b5fae0c09b89ab21b9856158ff56290abb9b8696031da851ac44cbd"
         }
       }
     },
@@ -209,6 +305,66 @@
           "use": "data",
           "optional": true,
           "needed_for": "replacement images in languages/<lang>/images/resident/PARTS/"
+        },
+        "font_win32_1920/FONT0__INFO.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)"
+        },
+        "font_win32_1920/FONT1__INFO.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)"
+        },
+        "font_win32_1920/FONT0_GOTHIC1.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)"
+        },
+        "font_win32_1920/FONT0_GOTHIC2.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)"
+        },
+        "font_win32_1920/FONT0_GOTHIC3.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)"
+        },
+        "font_win32_1920/FONT0_MINCHO.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)"
+        },
+        "font_win32_1920/FONT0_MODERN.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)"
+        },
+        "font_win32_1920/FONT1_GOTHIC1.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)"
+        },
+        "font_win32_1920/FONT1_GOTHIC2.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)"
+        },
+        "font_win32_1920/FONT1_GOTHIC3.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)"
+        },
+        "font_win32_1920/FONT1_MINCHO.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)"
+        },
+        "font_win32_1920/FONT1_MODERN.PAK": {
+          "use": "data",
+          "optional": true,
+          "needed_for": "letters added to the interface fonts (font_glyphs in language.json)"
         }
       }
     }

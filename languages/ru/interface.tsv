@@ -3,7 +3,7 @@ id	original	translation
 4f0350	Delete	Удалить
 4f0a60	Mouse	Мышь
 4f1654	Font	Шрифт
-4f1678	Clear	
+4f1678	Clear	Прозрачно
 4f16b0	All	Всё
 4f5d18	Holy Slave	Святая рабыня
 4f5d58	Nana's Delight	Наслаждение Наны
@@ -27,7 +27,7 @@ id	original	translation
 4f75d0	English	Русский
 4f75f0	Yes	Да
 4f7604	No	Нет
-4f761c	Close	Закрыть
+4f761c	Close	Назад
 4f7678	Clear data (system data) was saved.	Данные о прохождении (системные данные) сохранены.
 4f7708	Quick save data does not exist.	Быстрого сохранения нет.
 4f7780	Quick save cannot be used.	Быстрое сохранение сейчас недоступно.
@@ -165,8 +165,8 @@ id	original	translation
 509910	Shortcut Menu	Меню быстрого доступа
 509980	Previously Read Only	Только прочитанное
 5099ac	Skip	Пропуск
-5099d8	Slow	
-5099e0	Fast	
+5099d8	Slow	Медленно
+5099e0	Fast	Быстро
 5099f0	Skip/Rewind Speed	Скорость перемотки
 509a30	Bottom	Внизу
 509a38	Center	По центру
@@ -199,8 +199,8 @@ id	original	translation
 50aa80	Swipe outside the message window to jump to the previous chapter.	Смахивание вне окна текста: переход к предыдущей главе.
 50ac70	Swipe outside the message window to jump to the start of the next choice or to the latest previously read message.	Смахивание вне окна текста: переход к следующему выбору или к последней прочитанной реплике.
 50acf0	Swipe outside the message window to jump to the previous choice.	Смахивание вне окна текста: переход к предыдущему выбору.
-50adf8	Orange	
-50ae00	Yellow	
+50adf8	Orange	Оранжевый
+50ae00	Yellow	Жёлтый
 50ae0c	Text1	Текст 1
 50ae40	Language	Язык
 50ae50	Gothic1	Гротеск 1
@@ -208,28 +208,28 @@ id	original	translation
 50ae88	Gothic3	Гротеск 3
 50aea8	Mincho	Антиква
 50aebc	Modern	Модерн
-50af1c	Solid	
+50af1c	Solid	Непрозрачно
 50af70	Window Transparency	Прозрачность окна
 50af98	Only Choices	Только варианты
 50afe8	On	Вкл.
 50b008	Previously Read Text	прочитанное
 50b040	Color of	Выделять
-50b04c	Green	
-50b064	Blue	
-50b06c	Purple	
-50b078	Red	
+50b04c	Green	Зелёный
+50b064	Blue	Синий
+50b06c	Purple	Фиолетовый
+50b078	Red	Красный
 50b0a0	Read Text Color	Цвет прочитанного
 50b0b0	Wait Time Per Character: In Auto Mode, this sets the wait time until the next message is displayed based on the number of characters in text.	Пауза на символ: в автоматическом режиме задаёт паузу перед следующей репликой в зависимости от длины текста.
 50b3d0	Base Wait Time: You can set a Base Wait Time to add to ❝Wait Time Per Character❞.	Базовая пауза: постоянная пауза, которая добавляется к ❝Паузе на символ❞.
 50b458	Text2	Текст 2
 50b460	Text Speed	Скорость текста
-50b4b8	0 sec/char	
-50b4c8	0.1 sec/char	
+50b4b8	0 sec/char	0 сек/симв.
+50b4c8	0.1 sec/char	0,1 сек/симв.
 50b4e8	Wait Time Per Character	Пауза на символ
-50b530	0 sec	
-50b540	1 sec	
-50b550	2 sec	
-50b56c	3 sec	
+50b530	0 sec	0 сек
+50b540	1 sec	1 сек
+50b550	2 sec	2 сек
+50b56c	3 sec	3 сек
 50b590	Base Wait Time	Базовая пауза
 50b5a0	Sound	Звук
 50b5e8	Master Volume	Общая громкость
@@ -264,26 +264,26 @@ id	original	translation
 50bce0	Snap Pointer	Притягивать курсор
 50be50	Gestures: Moving the cursor while holding the left button works the same way as Touch controls.	Жесты: движение мыши с зажатой левой кнопкой работает так же, как сенсорное управление.
 50beb0	Left+Right Click: Hold left button then right click to switch between languages (English/Simplified Chinese/Japanese).	Левая + правая кнопки: зажмите левую кнопку и нажмите правую, чтобы сменить язык (русский/упрощённый китайский/японский).
-50c0a8	Game Ver. 	
+50c0a8	Game Ver. 	Версия игры 
 50c0cc	System	Система
 50c138	Full Screen	Полный экран
 50c158	Screen Mode	Режим экрана
-50c164	Auto	
+50c164	Auto	Авто
 50c1b0	Window Size	Размер окна
 50c450	Changing the setting to ❝Auto❞ will open the window at a scale based on the Windows ❝Display❞ setting.\nChanging ❝%%❞ will scale the display, with the default resolution being %d×%d pixels.\n (Scale cannot be increased beyond the maximum resolution of your display.)	Значение ❝Авто❞ открывает окно в масштабе, заданном в параметрах дисплея Windows.\nЗначения ❝%%❞ масштабируют изображение; исходное разрешение %d×%d пикселей.\n (Масштаб не может превышать максимальное разрешение вашего дисплея.)
 50c570	Change the quality of the in﹣game video.\nIf the video does not play properly, choose ❝Low Resolution❞.	Качество видео в игре.\nЕсли видео воспроизводится неправильно, выберите ❝Низкое разрешение❞.
-50d468	Feb.	
-50d470	Jan.	
-50d478	Apr.	
-50d480	Mar.	
-50d488	Jun.	
-50d490	May	
-50d494	Aug.	
-50d49c	Jul.	
-50d4a4	Oct.	
-50d4ac	Sept.	
-50d4b4	Dec.	
-50d4bc	Nov.	
+50d468	Feb.	фев.
+50d470	Jan.	янв.
+50d478	Apr.	апр.
+50d480	Mar.	мар.
+50d488	Jun.	июн.
+50d490	May	мая
+50d494	Aug.	авг.
+50d49c	Jul.	июл.
+50d4a4	Oct.	окт.
+50d4ac	Sept.	сен.
+50d4b4	Dec.	дек.
+50d4bc	Nov.	ноя.
 50d930	Please select the items you would like to use.	Выберите функции, которые хотите использовать.
 50df20	Mute	Без звука
 50e830	This is a work of fiction. \nAny resemblance to actual persons, living or dead, or actual events is purely coincidental.\nThe content of this game is not intended to encourage or represent actual criminal activities.\nPlease play responsibly.	Это художественное произведение. \nЛюбое сходство с реальными людьми и событиями случайно.\nСодержание игры не призывает к совершению преступлений.\nИграйте ответственно.

@@ -63,7 +63,7 @@ The files must be **unmodified originals**. If the patch is already installed in
 | Input set | Files |
 | --- | --- |
 | `jp-fhd` | `SCRIPT.PAK`; `image/`: `BGCG.PAK`, `CHARCG.PAK`, `EVENTCG.PAK`, `EVENTCG_SAVE.PAK`, `OTHCG.PAK`, `PARTS.PAK`, `SYSCG.PAK`, `SYSCG2.PAK`; `voice/`: `SYSVOICE.PAK`, `VOICE0.PAK`, `VOICE1.PAK` |
-| `ru-steam`, `en-steam` | `SCRIPT.PAK`; `image/`: `BGCG.PAK`, `CHARCG.PAK`, `EVENTCG.PAK`, `MANUAL.PAK`, `MANUAL_DECK.PAK`, `OTHCG.PAK`, `SYSCG.PAK`, `SYSCG2.PAK`; `voice/`: `SYSVOICE.PAK`, `VOICE.PAK`. Also `../CARTAGRA.exe` (the game folder's executable, next to `files/`) when the language translates the interface, and `image/resident/PARTS.PAK` only if you replace pictures from it |
+| `ru-steam`, `en-steam` | `SCRIPT.PAK`; `image/`: `BGCG.PAK`, `CHARCG.PAK`, `EVENTCG.PAK`, `MANUAL.PAK`, `MANUAL_DECK.PAK`, `OTHCG.PAK`, `SYSCG.PAK`, `SYSCG2.PAK`; `voice/`: `SYSVOICE.PAK`, `VOICE.PAK`. Also `../CARTAGRA.exe` (the game folder's executable, next to `files/`) when the language translates the interface, `image/resident/PARTS.PAK` only if you replace pictures from it, and `font_win32_1920/`: `FONT0__INFO.PAK`, `FONT1__INFO.PAK`, `FONT0_*.PAK`, `FONT1_*.PAK` (five faces each: `GOTHIC1`, `GOTHIC2`, `GOTHIC3`, `MINCHO`, `MODERN`) when the language adds letters to the small fonts (`font_glyphs`) |
 
 The exact sizes and checksums are listed in [definitions/inputs.json](definitions/inputs.json). The English file list is an assumption (the same as the Russian one); nobody has checked it.
 
@@ -77,6 +77,8 @@ robocopy "D:\Games\Cartagra2023RUS\files" "inputs\ru-steam\files" SCRIPT.PAK
 robocopy "D:\Games\Cartagra2023RUS\files\image" "inputs\ru-steam\files\image" BGCG.PAK CHARCG.PAK EVENTCG.PAK MANUAL.PAK MANUAL_DECK.PAK OTHCG.PAK SYSCG.PAK SYSCG2.PAK
 robocopy "D:\Games\Cartagra2023RUS\files\voice" "inputs\ru-steam\files\voice" SYSVOICE.PAK VOICE.PAK
 robocopy "D:\Games\Cartagra2023RUS" "inputs\ru-steam" CARTAGRA.exe
+robocopy "D:\Games\Cartagra2023RUS\files\image\resident" "inputs\ru-steam\files\image\resident" PARTS.PAK
+robocopy "D:\Games\Cartagra2023RUS\files\font_win32_1920" "inputs\ru-steam\files\font_win32_1920" FONT0*.PAK FONT1*.PAK
 ```
 
 Then check them:
@@ -148,9 +150,12 @@ robocopy "inputs\ru-steam" "D:\Games\Cartagra2023RUS" CARTAGRA.exe
 robocopy "inputs\ru-steam\files" "D:\Games\Cartagra2023RUS\files" SCRIPT.PAK
 robocopy "inputs\ru-steam\files\image" "D:\Games\Cartagra2023RUS\files\image" EVENTCG.PAK OTHCG.PAK
 robocopy "inputs\ru-steam\files\voice" "D:\Games\Cartagra2023RUS\files\voice" VOICE.PAK
+robocopy "inputs\ru-steam\files\image" "D:\Games\Cartagra2023RUS\files\image" SYSCG.PAK
+robocopy "inputs\ru-steam\files\image\resident" "D:\Games\Cartagra2023RUS\files\image\resident" PARTS.PAK
+robocopy "inputs\ru-steam\files\font_win32_1920" "D:\Games\Cartagra2023RUS\files\font_win32_1920" FONT1*.PAK
 ```
 
-If an old version of this patch installed `EVENTCG_SAVE.PAK` into `files\image\`, delete it too. If you installed replacement images, copy their original archives back as well (for example `files\image\resident\PARTS.PAK`).
+If an old version of this patch installed `EVENTCG_SAVE.PAK` into `files\image\`, delete it too. `BUILD_INFO.txt` lists every file a build installs.
 
 ## Translating the Restored Scenes
 
@@ -187,8 +192,7 @@ Write a line break as `\n` and a tab as `\t`. Keep the engine markup (`$A1`, `$d
 Limits of the game's fonts (found in game):
 
 - The interface font has no `«` and `»` (they show as blanks); use `❝` and `❞` (shown as “ ”), as the English text does.
-- The slider labels and the version number use a small font without Cyrillic letters: Russian text there is not shown. These strings stay English: `Slow`/`Fast`, `Solid`/`Clear`, `Auto`, the colour names of "Read Text Color" (`Orange`, `Yellow`, `Green`, `Blue`, `Purple`, `Red`), the scale labels of Text2 (`0 sec/char`, `0.1 sec/char`, `0 sec`..`3 sec`) and `Game Ver. `.
-- The save date on the save and load screens (`Oct. 27, 2026`) uses a font without Cyrillic letters too: a translated month showed as a blank (`. 27, 2026`). The month names stay English.
+- Some labels are drawn with the small font set `FONT1` (sizes 35 to 72), which has Latin letters only: the bottom bar (`Defaults`, `Close` and the like on the options, save and load screens), the slider labels, the version number and the save date. Russian text there showed as blanks. The build copies the Russian letters into `FONT1` from the large font set, scaled (`font_glyphs` in `language.json`, see [languages/README.md](languages/README.md)), so these strings are translated too.
 - `BGM`, `SE` and `MOVIE` are not in the table: the same strings are names of script commands in the executable, so they stay English (the BGM volume label shows "BGM").
 
 The build copies the table to `build/<lang>/interface.tsv`. To translate the interface into another language, copy [languages/_original_steam/en/interface.tsv](languages/_original_steam/en/interface.tsv) (English only) to `languages/<code>/interface.tsv` and fill in the `translation` column.
@@ -248,7 +252,7 @@ When you report a problem, give the scene name if you know it (for example `0208
 - In `0208-15-00`, Steam's own extra frame is no longer shown; the scene shows the original frames instead.
 - Before 2026-10-26 the patch did not update the read-text and choice records, so in restored scenes "Skip read text" skipped unread lines and chosen options were not remembered. Fixed and tested in game. The game writes this data only when you save (also quick save), not when you quit. It keeps this data in `%APPDATA%\GSE Saves\4290390\remote\data000.dat` (the bundled Steam emulator puts all saves there; the empty `userdata` folder in the game folder is not used). Back up that folder before installing a new build.
 - Chosen options are shown in another color only if **Options > Text1 > "Color of Previously Read Text"** is set to "Only Choices" (chosen options only, as in the Japanese release) or "On" (all read text). With "Off" the game still remembers your choices but doesn't mark them.
-- Slider labels, the version label and `BGM` stay English (see [Interface text](#interface-text)). Character names on the Voice page come from `PARAM.PAK` and are not translated.
+- `BGM` stays English (see [Interface text](#interface-text)). The labels drawn with the small font (bottom bar, slider labels, version, save date) use letters copied into that font by the build (checked in game on 2026-11-02). The right-hand bottom label is "Назад" rather than "Закрыть": the box keeps the English width and longer words run off the screen. Character names on the Voice page come from `PARAM.PAK` and are not translated.
 - The manual pages and the key names are still in English. The other interface pictures are translated by `tools/image_text.py` (see [Interface pictures](#interface-pictures)). The title menu buttons are cut to the width of the English words, so the Russian words there are smaller, and the two squeezed ones (ЗАГРУЗКА, ВЫХОД) look a little lighter. The save and load headings must leave room for the slot number, so SAVE is ЗАПИСЬ and ЗАГРУЗКА is smaller than LOAD was.
 - The short scene date on the save and load screens (`Feb. 15`) is still English: it comes from a table in the scripts, not from a picture.
 - The English build has never been made or tested.

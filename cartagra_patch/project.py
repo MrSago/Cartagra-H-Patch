@@ -80,9 +80,11 @@ def interface_translated(lang):
 
 def needed_optional_inputs(lang):
     """Optional input files (keys of definitions/inputs.json) this language's build reads."""
+    from .fonts import input_files
     from .images import changed_images
 
     needed = ["../CARTAGRA.exe"] if interface_translated(lang) else []
+    needed += input_files() if lang.get("font_glyphs") else []
     return needed + [f"image/{arch}.PAK" for arch in changed_images(lang)]
 
 

@@ -16,6 +16,9 @@ CZ0 (64-byte header): uncompressed RGBA rows. The engine loads it wherever
 another CZ type is expected: the Russian release replaced the title menu
 (CZ1 in the Japanese release) with CZ0 images.
 
+CZ2 (the font sheets): a 256 x RGBA palette, then LZW blocks (u32 count, count x (u32
+compressed bytes, u32 raw size)) of bit-packed codes; decoded and encoded by decode_cz2/encode_cz2.
+
 CZ1/CZ3/CZ4 data: u32 block count, block_count x (u32 code count, u32 raw size), then the
 16-bit LZW codes of every block (dictionary starts with the 256 bytes). The
 decompressed stream is RGB (CZ4) or RGBA (CZ3) rows followed (CZ4) by an
@@ -97,10 +100,106 @@ def _decode_cz1(data, hd):
     return b"".join(palette[i] for i in idx[: w * h])
 
 
+CZ2_MAX_CODES = 261885  # codes per block: the block ends when the dictionary reaches 2^18 - 3 entries
+
+
+def _lzw2_decode(data, raw_size):
+    """One CZ2 block: LZW codes packed LSB first, each a flag bit and 15 (flag 0) or 18 (flag 1) bits."""
+    pos, acc, nacc = 0, 0, 0
+    table = [bytes([i]) for i in range(256)] + [b""]  # the first new entry is 257
+    out = bytearray()
+    w = None
+    while len(out) < raw_size:
+        while nacc < 19:
+            acc |= (data[pos] if pos < len(data) else 0) << nacc
+            pos += 1
+            nacc += 8
+        k = 18 if acc & 1 else 15
+        code = (acc >> 1) & ((1 << k) - 1)
+        acc >>= k + 1
+        nacc -= k + 1
+        if code < len(table) and (code < 256 or code > 256):
+            entry = table[code]
+        elif w is not None and code == len(table):
+            entry = w + w[:1]
+        else:
+            raise ValueError("CZ2: bad LZW code")
+        out += entry
+        if w is not None:
+            table.append(w + entry[:1])
+        w = entry
+    return bytes(out[:raw_size])
+
+
+def _lzw2_encode(raw, start):
+    """Encode raw[start:] as one CZ2 block, until the dictionary is full. Returns (codes bytes, end)."""
+    table = {}  # (code of a string) << 8 | next byte -> code of the longer string
+    out, acc, nacc, ncodes, new = bytearray(), 0, 0, 0, 257
+    code, i, n = raw[start], start + 1, len(raw)
+    while True:
+        longer = table.get(code << 8 | raw[i]) if i < n else None
+        if longer is not None:
+            code = longer
+            i += 1
+            continue
+        acc |= ((code << 1) | (code >= 0x8000)) << nacc
+        nacc += 19 if code >= 0x8000 else 16
+        while nacc >= 8:
+            out.append(acc & 0xFF)
+            acc >>= 8
+            nacc -= 8
+        ncodes += 1
+        if i >= n or ncodes == CZ2_MAX_CODES:
+            break
+        table[code << 8 | raw[i]] = new
+        new += 1
+        code = raw[i]
+        i += 1
+    if nacc:
+        out.append(acc & 0xFF)
+    return bytes(out), i
+
+
+def decode_cz2(data, rows=None):
+    """CZ2 (8-bit indices into a 256 x RGBA palette): (header, palette bytes, indices of the first `rows` rows)."""
+    hd = header(data)
+    p = hd["header_length"]
+    palette = bytes(data[p : p + 1024])
+    count = struct.unpack_from("<I", data, p + 1024)[0]
+    sizes = [struct.unpack_from("<II", data, p + 1028 + 8 * i) for i in range(count)]
+    p += 1028 + 8 * count
+    need = hd["width"] * (hd["height"] if rows is None else rows)
+    idx = bytearray()
+    for n, raw in sizes:
+        if len(idx) >= need:
+            break
+        idx += _lzw2_decode(data[p : p + n], raw)
+        p += n
+    if len(idx) < need:
+        raise ValueError("CZ2: short index data")
+    return hd, palette, bytes(idx[:need])
+
+
+def encode_cz2(original, palette, width, height, indices):
+    """A CZ2 image with the given size and indices, keeping the rest of `original`'s CZ2 header."""
+    blocks, pos = [], 0
+    while pos < len(indices):
+        codes, end = _lzw2_encode(indices, pos)
+        blocks.append((codes, end - pos))
+        pos = end
+    head = bytearray(original[: struct.unpack_from("<I", original, 4)[0]])
+    struct.pack_into("<HH", head, 8, width, height)
+    return (bytes(head) + palette + struct.pack("<I", len(blocks))
+            + b"".join(struct.pack("<II", len(c), n) for c, n in blocks) + b"".join(c for c, _ in blocks))
+
+
 def decode(data):
     """Return (header dict, RGBA bytes of width x height)."""
     hd = header(data)
     w, h = hd["width"], hd["height"]
+    if hd["magic"] == b"CZ2\x00":
+        _, palette, idx = decode_cz2(data)
+        return hd, b"".join(palette[4 * i : 4 * i + 4] for i in idx)
     if hd["magic"] == b"CZ0\x00":
         p = hd["header_length"]
         if hd["bits"] != 32 or len(data) < p + 4 * w * h:
