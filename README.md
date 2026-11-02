@@ -24,6 +24,7 @@ Technical details, file formats and reverse-engineering notes are in [TECHNICAL_
 | CGs | 150 event CGs that Steam removed |
 | Edited pictures | 51 pictures that Steam edited (clothes added, blood, wounds and bodies hidden) are replaced by the originals |
 | Voices | 1,901 voice clips of the restored scenes |
+| Ending replay | In the Russian release, 7 of the 18 endings in Extras > Endings (Nana's Delight, Rin's Joy, Light in the Darkness, Toji's Love, Epilogue, Departure, True End) start in the middle of a script instruction and show a black screen: the table of script labels still has the positions of the shorter English scripts. The patch writes the table anew |
 | Text | Restored lines use the language's translation tables, then the existing translation where the same line exists elsewhere in the game; lines with neither show the Japanese text |
 | Interface (Russian) | The menus, options, dialogs, music and ending titles that the Russian release left in English are translated into Russian (277 of 296 strings in `CARTAGRA.exe`; tested in game). The interface pictures with text (title menu, tabs, system menu, buttons, labels, tagline) can be translated by a script from your own copy of the game (see [Interface pictures](#interface-pictures)); the manual pages stay English |
 
@@ -239,6 +240,8 @@ Not tested yet: the other 21 restored scenes, a full playthrough, loading saves 
 Interface translation (2026-10-26): the start-up notice, all Options pages, the exit and back-to-title dialogs were checked in game; a replacement picture was shown in game. Not checked in game: the voice collection and the music and ending titles (locked on a new profile).
 
 Interface pictures (2026-11-02, in game): the title and Extras menus (all words whole, hover states), the options tabs, the system menu, both in-game button layouts (classic and touch), the screen headings, the save and load screens and the scene date label. Not seen in game: the "Jump" indicators with text, the SAVE/LOAD side labels and the `CONFIG_TAB1_en` tabs (not used by the PC layout seen here), the Extras subpages. See [TECHNICAL_NOTES.md](TECHNICAL_NOTES.md#interface-text-and-images).
+
+Ending replay (2026-11-02, in game): after the label table fix, Наслаждение Наны, Свет во тьме and Эпилог start at their ending scenes from Extras > Endings (they showed a black screen before). Счастье Рин, Любовь Тоджи, В путь and Истинная концовка were locked in the test profile and are not checked.
 
 When you report a problem, give the scene name if you know it (for example `0208-13-01H`), what you saw, and whether the unpatched game behaves differently there.
 

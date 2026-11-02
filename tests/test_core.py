@@ -220,6 +220,15 @@ class LucaScriptTests(unittest.TestCase):
         self.assertEqual(bad, [])
         self.assertEqual(int.from_bytes(parsed[2].body[:4], "little"), parsed[1].offset)
 
+    def test_lzw_entry_roundtrip(self):
+        for raw in (b"", b"a", b"\r\nLABEL01:10(3),LABEL02:20(5),\r\n\r\n" * 50, bytes(range(256)) * 3):
+            packed = ls.lzw_pack(raw)
+            self.assertEqual(packed[:4], b"LZW\0")
+            self.assertEqual(ls.lzw_unpack(packed), raw)
+        self.assertLess(len(ls.lzw_pack(b"abc" * 1000)), 3000)
+        with self.assertRaises(ValueError):
+            ls.lzw_unpack(b"CZ0\0" + bytes(8))
+
 
 def build_script(instrs, jumps=None):
     """Assemble instrs; jumps: {index of a GOTO/IF: index of its target}."""
@@ -314,6 +323,54 @@ class ReadFlagTests(unittest.TestCase):
         self.assertEqual(changed, ["s1", "s2"])
         self.assertEqual([sp.ARFLAG_RECORD.unpack_from(data, k) for k in range(0, len(data), 16)],
                          [(16, 0x11F, 0, 1, 31, 0, 0, 0), (16, 0x11F, 0, 2, 5, 0, 0, 0), (16, 0x11F, 0, 3, 0, 0, 4, 0)])
+
+
+def said(line, text):
+    return op(sp.OP_MESSAGE, sp.build_rus_message(line, 0, "あ", text, b"\x0b\x0a\0\0\0"), line)
+
+
+class LabelTableTests(unittest.TestCase):
+    def test_line_target_and_offset_map(self):
+        src = build_script([op(26), said(5, "a"), op(41, b"\0\0", 9), op(21, ls.make_str(b"x"), 12)])
+        self.assertEqual(sp.label_line_target(src, 7), ls.parse(src)[2].offset)
+        with self.assertRaises(ValueError):
+            sp.label_line_target(src, 12)
+        a = ls.parse(src)
+        out = ls.parse(build_script([op(26), op(22, b"\0\0", 1), said(5, "a"), op(21, ls.make_str(b"x"), 12)]))
+        # op 41 was removed: it maps to the next instruction that is still there
+        self.assertEqual(sp.offset_map(src, b"".join(i.encode() for i in out)),
+                         {a[0].offset: out[0].offset, a[1].offset: out[2].offset,
+                          a[2].offset: out[3].offset, a[3].offset: out[3].offset})
+
+    def test_rebuild_scr_label(self):
+        # s1: target script with a stale offset; the build inserts an instruction in front
+        s1 = build_script([op(26), said(5, "a"), said(9, "b"), op(41, b"\0\0", 12), op(21, ls.make_str(b"x"), 13)])
+        s1_out = build_script([op(26), op(22, b"\0\0", 1), said(5, "a"), said(9, "b"), op(41, b"\0\0", 12),
+                               op(21, ls.make_str(b"x"), 13)])
+        # p1: ported from JP (op 54 -> 55, op 129 dropped); the target's own version has a label JP lacks
+        p1_jp = build_script([op(26), op(54, b"\0\0", 3), op(129, b"", 4), said(6, "до"), op(41, b"\0\0", 7)])
+        p1_tg = build_script([op(26), said(2, "до"), op(19, ls.make_str(b"#1") + bytes(4), 4), op(41, b"\0\0", 5)],
+                             {2: 3})
+        p1_out = build_script([op(26), op(55, b"\0\0", 3), said(6, "до"), op(41, b"\0\0", 7)])
+        jp_off, out_off, s1_off = ([i.offset for i in ls.parse(d)] for d in (p1_jp, p1_out, s1_out))
+        tg_label = ls.lzw_pack(b"\r\nA:3(10),\r\nENDING:1(3),\r\n\r\n")
+        jp_label = ls.lzw_pack(b"\r\n\r\nX:%d,Y:%d,\r\n" % (jp_off[2], jp_off[1]))
+        entries = [Entry("s1", s1_out), Entry("p1", p1_out), Entry("n1", build_script([op(26)])), Entry("_meta", b"")]
+        data, total, moved = sp.rebuild_scr_label(tg_label, [("s1", s1), ("p1", p1_tg)], jp_label,
+                                                  [("j0", b""), ("p1", p1_jp), ("n1", b"")], entries, {"p1", "n1"})
+        self.assertEqual((total, moved), (4, 1))
+        self.assertEqual(ls.lzw_unpack(data).split(b"\r\n"), [
+            b"", b"A:%d(10)," % s1_off[4],                                   # before the first line above 10
+            b"X:%d,Y:%d,ENDING:%d," % (out_off[2], out_off[1], out_off[3]),  # X was on the dropped op 129
+            b"",                                                              # n1 (new) has no labels
+            b"", b""])                                                        # the target's last lines
+        p1_bad = build_script([op(26), op(55, b"\0\0", 3), op(41, b"\0\0", 7)])
+        with self.assertRaisesRegex(ValueError, "p1: label ENDING"):  # its message is not in the ported script
+            sp.rebuild_scr_label(tg_label, [("s1", s1), ("p1", p1_tg)], jp_label, [("j0", b""), ("p1", p1_jp)],
+                                 [Entry("s1", s1_out), Entry("p1", p1_bad)], {"p1"})
+        with self.assertRaisesRegex(ValueError, "p1: label X has no instruction"):
+            sp.rebuild_scr_label(tg_label, [("s1", s1), ("p1", p1_tg)], jp_label, [("j0", b""), ("p1", p1_jp)],
+                                 [Entry("s1", s1_out), Entry("p1", build_script([op(26), op(55, b"\0\0", 3)]))], {"p1"})
 
 
 class CzToolTests(unittest.TestCase):
@@ -798,6 +855,12 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(sp.calls_to(script["0000-op1"], "0000-op0_HD"), 1)
         self.assertEqual(sp.calls_to(script["0308-02-00"], "0000-op0_HD"), 0)
         self.assertEqual(sp.rebuild_arflag(script["_arflag"], [e.name for e in entries], entries)[1], [])  # every script has a correct record
+        # every label (the ending list starts scripts there) is an instruction start
+        labels = sp.read_labels(script["_scr_label"])
+        for k, e in enumerate(x for x in entries if not x.name.startswith("_")):
+            starts = {i.offset for i in ls.parse(e.data)}
+            self.assertEqual([n for n, o, _ in labels[k + 1] if o not in starts], [], e.name)
+        self.assertIn(b"ENDING", [n for n, _, _ in labels[[e.name for e in entries].index("0210-12-01h") + 1]])
         # the archives of the translated pictures (languages/ru/images/, not in git) are added
         pictures = {f"image/{archive}.PAK" for archive in images.changed_images(lang)}
         # and the small fonts with the added letters

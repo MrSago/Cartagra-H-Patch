@@ -55,6 +55,7 @@ Module names refer to `cartagra_patch/<name>.py`. Before the 2026-10-26 refactor
 8. **[V]** Steam **moved the prologue and the opening movie** from New Game to just before part 2, and the Rengoku movie from there to the end of `0209-08-00`. The patch restores the JP order with three script edits (see [Start Sequence](#start-sequence)).
 9. **[V]** The bitmaps for read lines and chosen options in the system data are sized by the `_arflag` table of `SCRIPT.PAK`, which the patch must update for every changed script (see [Read Flags and Saves](#read-flags-and-saves)).
 10. **[V]** The interface text is in `CARTAGRA.exe` (Japanese, Chinese and English strings; the Russian release shows the English ones). The patch translates it from a TSV table by adding a section with the translations and redirecting the references, the same method the Russian translators used for the prologue text. Interface pictures stay as they are but can be replaced (see [Interface Text and Images](#interface-text-and-images)).
+11. **[V]** The Extras ending list starts 7 of its 18 endings at a script label, whose bytecode offset comes from `_scr_label`. In the Russian release those offsets still belong to the shorter English scripts and point into the middle of instructions (only 8 of 359 are instruction starts), so these endings began with garbage instead of their first instruction (user report 2026-11-02: black screen). The patch writes the table anew (see [Label table](#label-table)).
 
 ## Game Installations in This Project
 
@@ -196,7 +197,7 @@ Strings inside bodies are `i16 -n`, then n bytes (Shift-JIS/ASCII), then NUL. Ex
 | 19 | IF | str (e.g. `#6069!=0`), u32 target |
 | 21 | JUMP to another script | str (script name) |
 
-**[V]** No script refers to a label by name.
+**[V]** No script refers to a label by name; the executable does (the ending list, see [Label table](#label-table)).
 
 ### Text instructions
 
@@ -221,9 +222,39 @@ Strings inside bodies are `i16 -n`, then n bytes (Shift-JIS/ASCII), then NUL. Ex
 **[V]** `SCRIPT.PAK` also holds `_varset_システムフラグ`, `_arflag` (bitmap sizes per script, see [Read Flags and Saves](#read-flags-and-saves)), `_varstr`, `_varnum`, `_varname`, `_colorbg`, `_scr_label`, `_task`, plus `_build_time`/`_varstrname` (RUS) or `_build_count` (JP).
 
 - `_varname`: u16 ID + NUL-terminated name. 134 names are common to both builds; IDs 6044–6069 are shifted by −1 in RUS (e.g. `SNOW` is 6069 in JP and 6068 in RUS).
-- `_scr_label`: `LZW\0`, u32 total size, u32 chunk count, then per chunk u32 code count, u32 output size, and 16-bit LZW codes (dictionary from 257). It decodes to one line per script, `LABEL:offset,` (JP) or `LABEL:offset(line),` (RUS). The offsets point into the **source text**, not the bytecode (they exceed the bytecode size). **[H]** debug source map only; the patch leaves it unchanged, and the in-game tests showed no problem.
+- `_scr_label`: the script labels, see [Label table](#label-table).
 
 **[V]** The early unpacked folders `SCRIPT_RUS_unpacked/` and `SCRIPT_CHS_unpacked/` (now in `local/legacy/`, outside git) lack 9 and 8 of these metadata entries, so they cannot be repacked. The build reads the archives directly; `python -m cartagra_patch.lucapak unpack <pak> <dir>` extracts every entry for inspection.
+
+### Label table
+
+**[V]** `_scr_label` is `LZW\0`, u32 total size, u32 chunk count, then per chunk u32 code count, u32 output size and 16-bit LZW codes (new codes from 257; one chunk in both builds; `lucascript.lzw_pack` reproduces both entries byte for byte). It decodes to an empty line, then one line per script in entry order (line *n* = resource ID *n*), then two empty lines: `LABEL:offset,` (JP) or `LABEL:offset(source line),` (RUS), UTF-8, `\r\n` between lines.
+
+**[V]** (2026-11-02, disassembly of the Steam `CARTAGRA.exe`) The Extras ending list (`task::EndingList`) is an array of 18 entries of 0xE0 bytes (built at `0x160e0`): index, unlock flag (`0x2f00`..`0x2f11`), script name, label (empty for most) and titles in three languages. Playing an entry looks up the label in the script's line of `_scr_label`, reads the number after `:` (the part in parentheses is skipped) and starts the script with the program counter set to that number (`0x25c2e0`; the instruction decoder reads `u16 length` at that offset). Endings with a label (position in the list, English title):
+
+| Position | Title | Script | Label |
+| --- | --- | --- | --- |
+| 2 | Nana's Delight | `0210-12-01h` (ported) | `ENDING` |
+| 4 | Rin's Joy | `0210-99-01` | `ENDING` |
+| 9 | Light in the Darkness | `0218-01-04` | `ENDING` |
+| 10 | Toji's Love | `0221-99-01` | `ENDING` |
+| 11 | Epilogue | `0223-01-01` | `ENDING` |
+| 14 | Departure | `a1-6-1` | `DEFAULT` |
+| 15 | True End | `a1-6-1` | `ENDING` |
+
+The other eleven start at the beginning of their script; among them Holy Slave (`0210-10-00`, ported) and Grand Epilogue (`0308-02-00`, start sequence edited).
+
+**[V]** JP offsets are exact: all 393 are instruction starts. RUS offsets are not: 8 of 359 are instruction starts, and all 7 ending labels point into the middle of a message (for example `ENDING:1782(48)` in `0210-12-01h`, where line 48 is at offset 2762). They fit the English Steam scripts, which the translation made longer. The source line still places a label: it stands before the first instruction with a higher debug line number. Checked on the 18 scripts with the same instruction count in both builds: for all 48 labels they share, this rule gives the instruction at the JP offset.
+
+The build writes the table anew (`script_port.rebuild_scr_label`):
+
+- **Target scripts** (unchanged or edited by the build): each label goes before the first instruction after its source line, followed through the build's edits (instructions aligned on opcode and line; an instruction that was removed maps to the next one).
+- **Ported scripts**: the JP labels with their exact offsets, followed through the port (ops translated by the opcode map; a label on a dropped op lands on the next instruction). Labels that only the target has (only `ENDING` of `0210-12-01h`, added by Steam) go after the message that precedes them in the target script, found in the ported script by its Russian text (`После операции...`). Steam's script has an `IF (#30021)` block there that the JP script lacks.
+- The 4 added scenes get lines for their resource IDs 265..268.
+
+Result for `ru`: 400 labels, all instruction starts; 351 of the target's offsets corrected. The build stops if a label cannot be placed.
+
+**[V]** In game (2026-11-02, Extras > Endings, endings unlocked in the user's profile: 5 of 18): Nana's Delight starts on the cloud background with «Меня увезли из Токио в реабилитационную клинику в глуши.» (the line after «После операции...»); Light in the Darkness on the candle-lit corridor («Узкий проход разинул свою пасть...»); Epilogue with text on black («Растаял покрывавший улицы снег...», no picture command between the label and this line), then the station scene. Powerless (no label) plays from the start. Text advances; memory stays at about 1.0-1.06 GB; "End playback?" returns to the list.
 
 ## Porting Scripts from JP to RUS
 
@@ -580,7 +611,7 @@ Repository contents: `pak.py`, `SCRIPT.PAK`, `SCRIPT_FHD/` (`solvev2.py` text ex
 1. **EVENTCG**: read `<target>/image/EVENTCG.PAK`, append the JP-only entries (`lucapak.append_missing`: parents remapped by name, xxh64 computed), replace the censored entries in place (`replace_from`) and append the split copy `e047_jp` (`append_copy`). Untouched entries are byte-identical and in their original order (verified).
    **OTHCG**: replace the 16 censored pictures in place.
 2. **VOICE**: the same for `VOICE.PAK` with `VOICE0.PAK` as donor, copying section values.
-3. **SCRIPT**: build the name maps (images over all target image archives with the new EVENTCG; voices with the new VOICE; variables from `_varname`), the translation memory and the first free select slot. Port the 24 scenes, check every jump target, write the translation tables, retarget the 4 predecessor JUMPs and insert the 4 new scenes before the metadata entries. Then apply the two target script fixes for censored pictures and restore the [start sequence](#start-sequence) (3 scripts). Finally recompute `_arflag` for all scripts ([Read Flags and Saves](#read-flags-and-saves)). 250 of 274 entries stay byte-identical.
+3. **SCRIPT**: build the name maps (images over all target image archives with the new EVENTCG; voices with the new VOICE; variables from `_varname`), the translation memory and the first free select slot. Port the 24 scenes, check every jump target, write the translation tables, retarget the 4 predecessor JUMPs and insert the 4 new scenes before the metadata entries. Then apply the two target script fixes for censored pictures and restore the [start sequence](#start-sequence) (3 scripts). Write `_scr_label` anew ([Label table](#label-table)) and finally recompute `_arflag` for all scripts ([Read Flags and Saves](#read-flags-and-saves)). 243 of the 274 original entries stay byte-identical (2026-11-02).
 4. **Interface**: when `languages/<lang>/interface.tsv` has translations, read `<target>/../CARTAGRA.exe` and write the translated executable (see [Interface Text and Images](#interface-text-and-images)); write the table to `build/<lang>/interface.tsv`. Replace the pictures in `languages/<lang>/images/<archive>/` that differ from the exported originals in `languages/<interface_original>/images/` (byte comparison of the PNG files; without an exported original the pixels are compared). Archives already written by step 1 are modified there, others are read from `<target>/image/`; an archive is written only if a picture in it changed.
 5. **Output**: write `BUILD_INFO.txt` and move the staging folder to `dist/<lang>/`.
 
@@ -658,6 +689,7 @@ Test setup: `CARTAGRA.exe`, window resized to 1280×720 (on a 2048×1280 screen 
 | 2026-10-26 | same | Restored pictures | **[V]** confirmed in game by the user |
 | 2026-10-26 | full patch with the start sequence | New Game | **[V]** prologue, opening and the following scenes work; confirmed in game by the user |
 | 2026-10-26 | interface translation | Start-up notice, Options, dialogs, replacement picture | **[V]** Russian text shown and fits; small-font labels kept English; replacement picture shown (see [Interface Text and Images](#interface-text-and-images)) |
+| 2026-11-02 | label table written anew | Extras > Endings: Nana's Delight, Light in the Darkness, Epilogue (labels), Powerless | **[V]** each starts at its ending scene and advances; no black screen, memory steady; back to the list (see [Label table](#label-table)) |
 | 2026-10-26 | `_arflag` fix, test start `0217-01-05h` | Skip read text, remembered choice, system data | **[V]** SKIP stops at the first unread line; the chosen option is marked; records of the added scenes saved (see [Read Flags and Saves](#read-flags-and-saves)) |
 
 The 4 scenes added last (`0210-10-00`, `0214-05-00`, `0215-03-00`, `0215-05-02`) went through the same automatic checks but have not been played in game.
@@ -671,14 +703,14 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 | Area | Tests |
 | --- | --- |
 | Archives | xxHash64 test vectors; byte-identical PAK round trip (also with a name prefix such as `PARTS/`); appending keeps the IDs of existing entries and remaps parent IDs by name; in-place replacement keeps the ID |
-| Scripts | `_arflag` counts (lines incl. op 43, select bit ranges, markers) and record rebuild (stale record fixed, metadata record kept, missing record appended); jump targets relocated after inserting an odd-length instruction; start sequence: call inserted after the setup instructions, movie block cut (jumps redirected, marker IDs renumbered), calls replaced by the movie (jumps land on it) |
+| Scripts | `_arflag` counts (lines incl. op 43, select bit ranges, markers) and record rebuild (stale record fixed, metadata record kept, missing record appended); jump targets relocated after inserting an odd-length instruction; `LZW\0` entry round trip; label table: line rule, instruction alignment (removed instruction maps to the next), rebuild (stale target offset corrected through an inserted instruction, JP labels followed through a port with a dropped op, target-only label placed after the same message, new script gets a line, clear errors when a label cannot be placed); start sequence: call inserted after the setup instructions, movie block cut (jumps redirected, marker IDs renumbered), calls replaced by the movie (jumps land on it) |
 | Images | CZ4 decode of an image made by a test encoder (2 LZW blocks, delta bands); alpha compositing; CZ0 encode/decode keeps the placement fields; PNG reader (RGBA, RGB, palette with transparency; filters 0-4) and PNG round trip; replacement pictures in a build (archive entry replaced and its hash updated, other entries kept; wrong size and unknown entry rejected); picture export by name and pattern, copies never overwritten, unedited copies skipped (no archive written, no input needed), pixel comparison without exported originals; `images.tsv` matches the Steam archives (when present) |
 | Interface text | synthetic PE: `lea` and relocated-pointer references, translation into `.uitext` (references redirected, originals kept, `SizeOfImage`, second run rejected, empty table = unchanged); table checks (placeholders, duplicate id, wrong original, id outside the file); table round trip; the `ru` and original tables fit `inputs/ru-steam/CARTAGRA.exe` (when present) |
 | Translation tables | write/read round trip with escapes and the five-column header; older formats (`source`/`existing`/`translation`, `ru_existing`/`ru`); missing table |
 | Languages and paths | every language has a valid status and an existing input set; `en` is not `complete`; unknown language rejected; project paths are absolute and independent of the working directory; output names `ru`, `ru-partial`, `ru-test` |
 | Input validation | missing folder and files; wrong entry count; wrong size; changed data detected by SHA-256 and skipped with `verify_checksums=False`; optional files required only when needed; executable header and checksum |
 | CLI | `--help` (0), no language (2), unknown language (2), `--test-set` without `--test-start` (2), `--list-languages` shows the statuses, missing inputs (1); run from a working directory with spaces, inputs in a folder with spaces |
-| Integration (`CARTAGRA_INTEGRATION=1`) | `ru` build from `inputs/` into a temporary folder as the reference build (`reference=True`: no tables, start sequence or `_arflag` update; equal to the SHA-256 of the pre-refactoring build), then twice normally (identical output; New Game calls the prologue, `0308-02-00` no longer does; `_arflag` correct for every script; `CARTAGRA.exe` written only by the normal builds); inputs still pass the checksum check and are not modified |
+| Integration (`CARTAGRA_INTEGRATION=1`) | `ru` build from `inputs/` into a temporary folder as the reference build (`reference=True`: no tables, start sequence or `_arflag` update; equal to the SHA-256 of the pre-refactoring build), then twice normally (identical output; New Game calls the prologue, `0308-02-00` no longer does; `_arflag` correct for every script; every `_scr_label` offset an instruction start, `ENDING` in `0210-12-01h`; `CARTAGRA.exe` written only by the normal builds); inputs still pass the checksum check and are not modified |
 
 **[V]** 2026-10-26 (`_original_jp`/`_original_steam` split, picture export): 32 unit tests and the integration test pass.
 
@@ -694,7 +726,7 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 6. `0210-10-00` and `0215-03-00` show the Japanese date eyecatch instead of the English one the RUS build uses.
 7. Steam-only Russian lines inside censored scenes are dropped with the Steam rewrite.
 8. Restored pictures: the JP 4368×2457 pan image `e007k0` is not used (the RUS script shows the static uncensored `e007` instead), and Steam's own frame `e007k0` is no longer shown.
-9. `_scr_label` is not updated for the ported scenes (**[H]** debug data only).
+9. Of the endings started at a label (see [Label table](#label-table)), Rin's Joy, Toji's Love, Departure and True End have not been played from the Extras list (locked in the test profile); Nana's Delight, Light in the Darkness and Epilogue were.
 10. 21 of the 24 restored scenes have not been played in game.
 11. Read lines and chosen options are written to disk only when saving (game behaviour; see [Read Flags and Saves](#read-flags-and-saves)).
 12. Interface: `BGM`/`SE`/`MOVIE` stay English; character names on the Voice page (`PARAM.PAK` `_voice_param`) are not translated; the manual pages and the key names are English. The labels drawn with FONT1 (bottom bar, slider labels, version, save date) rely on the letters the build adds to that font (seen in game with the Mincho face only). The voice collection and the music and ending titles have not been seen in game.

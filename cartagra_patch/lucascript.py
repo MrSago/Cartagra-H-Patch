@@ -120,6 +120,57 @@ def assemble(instrs, valid_targets=None):
     return bytes(out)
 
 
+def lzw_unpack(data):
+    """
+    Contents of an "LZW\\0" metadata entry (_scr_label): u32 size, u32 chunk count, then per
+    chunk u32 code count, u32 output size and 16-bit codes; new codes start at 257 in each chunk.
+    """
+    if data[:4] != b"LZW\0":
+        raise ValueError("not an LZW entry")
+    total, chunks = struct.unpack_from("<II", data, 4)
+    p, out = 12, bytearray()
+    for _ in range(chunks):
+        count, size = struct.unpack_from("<II", data, p)
+        codes = struct.unpack_from(f"<{count}H", data, p + 8)
+        p += 8 + 2 * count
+        table, chunk, prev, nxt = {i: bytes([i]) for i in range(256)}, bytearray(), None, 257
+        for c in codes:
+            if c in table:
+                cur = table[c]
+            elif prev is not None and c == nxt:
+                cur = prev + prev[:1]
+            else:
+                raise ValueError(f"bad LZW code {c}")
+            if prev is not None:
+                table[nxt] = prev + cur[:1]
+                nxt += 1
+            chunk += cur
+            prev = cur
+        out += chunk[:size]
+    if len(out) != total:
+        raise ValueError(f"LZW entry: {len(out)} bytes decoded, header says {total}")
+    return bytes(out)
+
+
+def lzw_pack(raw):
+    """Inverse of lzw_unpack, in one chunk (reproduces the original _scr_label entries byte for byte)."""
+    table, codes, w, nxt = {bytes([i]): i for i in range(256)}, [], raw[:1], 257
+    for c in raw[1:]:
+        wc = w + bytes([c])
+        if wc in table:
+            w = wc
+            continue
+        codes.append(table[w])
+        table[wc] = nxt
+        nxt += 1
+        w = bytes([c])
+    if w:
+        codes.append(table[w])
+    if nxt > 0x10000:
+        raise ValueError("too much data for one LZW chunk")
+    return b"LZW\0" + struct.pack("<IIII", len(raw), 1, len(codes), len(raw)) + struct.pack(f"<{len(codes)}H", *codes)
+
+
 def check(data):
     """Parse a script and verify every jump target is an instruction start."""
     instrs = parse(data)

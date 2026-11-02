@@ -151,6 +151,7 @@ def run_build(opt, restoration, log=print):
     jp_by = {e.name: e for e in jp_script.entries}
     tg_by = {e.name: e for e in tg_script.entries}
     tg_names = [e.name for e in tg_script.entries]
+    tg_original = [(e.name, e.data) for e in tg_script.entries if not e.name.startswith("_")]
     first_meta = len(tg_script.entries) if opt.reference else next(
         k for k, e in enumerate(tg_script.entries) if e.name.startswith("_"))
     res = sp.ResourceMap(
@@ -225,6 +226,16 @@ def run_build(opt, restoration, log=print):
 
     if not opt.reference:
         _restore_start_sequence(log, restoration, jp_by, tg_by, scenes)
+        # before the test stub, which replaces the New Game script
+        try:
+            data, labels, moved = sp.rebuild_scr_label(
+                tg_by["_scr_label"].data, tg_original, jp_by["_scr_label"].data,
+                [(e.name, e.data) for e in jp_script.entries if not e.name.startswith("_")],
+                tg_script.entries, set(scenes))
+        except (KeyError, ValueError) as e:
+            raise BuildError(f"_scr_label: {e}")
+        set_entry(tg_by["_scr_label"], data)
+        log(f"  _scr_label: {labels} labels; {moved} offsets of the target build corrected")
 
     if opt.test_start:
         start = restoration["new_game_script"]

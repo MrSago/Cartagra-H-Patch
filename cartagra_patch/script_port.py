@@ -24,6 +24,7 @@ speaker tag translated when known).
 """
 
 import collections
+import difflib
 import os
 import re
 import struct
@@ -548,3 +549,112 @@ def rebuild_arflag(arflag, old_names, entries):
             records[e.name] = list(ARFLAG_HEAD) + [index[e.name]] + list(arflag_counts(e.data)) + [0]
             changed.append(e.name)
     return b"".join(ARFLAG_RECORD.pack(*r) for r in sorted(records.values(), key=lambda r: r[3])), changed
+
+
+# ---------------------------------------------------------------- label table
+# "_scr_label" (LZW) has an empty line, then one line per script in entry order:
+# "NAME:offset," (JP) or "NAME:offset(source line)," (RUS). The ending list starts
+# a script at a label by setting the program counter to the offset. The Russian
+# release kept the offsets of the shorter English scripts, which now point into the
+# middle of instructions; the source line still places the label: before the first
+# instruction with a higher line number (TECHNICAL_NOTES.md, "Label table").
+
+LABEL = re.compile(rb"([^:,]+):(\d+)(?:\((\d+)\))?,")
+
+
+def read_labels(data):
+    """Lines of a _scr_label entry as [[(name, offset, source line or None), ...], ...]; index = script number."""
+    return [[(m[1], int(m[2]), int(m[3]) if m[3] else None) for m in LABEL.finditer(line)]
+            for line in ls.lzw_unpack(data).split(b"\r\n")]
+
+
+def label_line_target(data, line):
+    """Offset of the instruction a label on source line `line` stands before."""
+    for ins in ls.parse(data):
+        if ins.line is not None and ins.line > line:
+            return ins.offset
+    raise ValueError(f"no instruction after line {line}")
+
+
+def offset_map(src_data, out_data, opmap=None):
+    """
+    {source offset: output offset} for the instructions of a script and of an edited or
+    ported copy (source opcodes translated by opmap), aligned on (opcode, line). An
+    instruction without a counterpart maps to the next one that has one.
+    """
+    src, out = ls.parse(src_data), ls.parse(out_data)
+    match = difflib.SequenceMatcher(None, [((opmap or {}).get(i.op, i.op), i.line) for i in src],
+                                    [(i.op, i.line) for i in out], autojunk=False)
+    offsets = {}
+    for a, b, size in match.get_matching_blocks():
+        for k in range(size):
+            offsets[src[a + k].offset] = out[b + k].offset
+    nxt = None
+    for ins in reversed(src):
+        nxt = offsets.setdefault(ins.offset, nxt)
+    return {k: v for k, v in offsets.items() if v is not None}
+
+
+def after_same_message(rus_data, target, out_data):
+    """
+    Offset in out_data where a label of rus_data at `target` belongs: after the message that
+    precedes it in rus_data, found in out_data by its translated text.
+    """
+    before = [i for i in ls.parse(rus_data) if i.op == OP_MESSAGE and i.offset < target]
+    if not before:
+        raise ValueError(f"no message before 0x{target:X}")
+    text = parse_rus_message(before[-1].body)[3]
+    out = ls.parse(out_data)
+    hits = [k for k, i in enumerate(out[:-1]) if i.op == OP_MESSAGE and parse_rus_message(i.body)[3] == text]
+    if len(hits) != 1:
+        raise ValueError(f"the message {text[:40]!r} occurs {len(hits)} times")
+    return out[hits[0] + 1].offset
+
+
+def rebuild_scr_label(tg_label, tg_scripts, jp_label, jp_scripts, entries, ported):
+    """
+    New _scr_label data for `entries` (all entries of the new SCRIPT.PAK, scripts first).
+    tg_label/jp_label: the _scr_label data of the target and JP archives; tg_scripts/jp_scripts:
+    their scripts in entry order, as [(name, data)]; ported: names of the scripts ported from JP.
+    Ported scripts get the JP labels (exact offsets, followed through the port) and the target's
+    other labels after the same message; the other scripts get the target's labels, placed by
+    source line and followed through the edits of the build.
+    Returns (data, number of labels, number of labels whose offset changed).
+    """
+    tg_lines, jp_lines = read_labels(tg_label), read_labels(jp_label)
+    tg = {name: (data, tg_lines[k + 1]) for k, (name, data) in enumerate(tg_scripts)}
+    jp = {name: (data, jp_lines[k + 1]) for k, (name, data) in enumerate(jp_scripts)}
+    lines, total, moved = [b""], 0, 0
+    for e in entries:
+        if e.name.startswith("_"):
+            break
+
+        def follow(offsets, n, o):
+            if o not in offsets:
+                raise ValueError(f"{e.name}: label {n.decode('utf-8', 'replace')} has no instruction in the new script")
+            return offsets[o]
+
+        labels = []
+        if e.name in ported:
+            jp_data, jp_labels = jp[e.name]
+            offsets = offset_map(jp_data, e.data, OPMAP)
+            labels = [(n, follow(offsets, n, o), None) for n, o, _ in jp_labels]
+            tg_data, tg_labels = tg.get(e.name, (None, []))
+            for n, _, line in tg_labels:
+                if n not in {m for m, _, _ in jp_labels}:
+                    try:
+                        labels.append((n, after_same_message(tg_data, label_line_target(tg_data, line), e.data), None))
+                    except ValueError as err:
+                        raise ValueError(f"{e.name}: label {n.decode('utf-8', 'replace')}: {err}")
+        elif e.name in tg:
+            tg_data, tg_labels = tg[e.name]
+            offsets = offset_map(tg_data, e.data)
+            for n, o, line in tg_labels:
+                labels.append((n, follow(offsets, n, o if line is None else label_line_target(tg_data, line)), line))
+                moved += labels[-1][1] != o
+        total += len(labels)
+        lines.append(b"".join(b"%s:%d%s," % (n, o, b"" if line is None else b"(%d)" % line) for n, o, line in labels))
+    if len(lines) != sum(1 for e in entries if not e.name.startswith("_")) + 1:
+        raise ValueError("scripts must come before the metadata entries")
+    tail = ls.lzw_unpack(tg_label).split(b"\r\n")[len(tg_scripts) + 1:]
+    return ls.lzw_pack(b"\r\n".join(lines + tail)), total, moved
