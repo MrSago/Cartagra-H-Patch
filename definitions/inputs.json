@@ -2,7 +2,7 @@
   "_comment": "Files each input set must contain, relative to inputs/<set>/files/ (\"../\" = the game folder itself). use=data: contents are copied or patched (SHA-256 verified when known); use=index: only the archive's entry names are read (entry count checked when known). optional=true: needed only by some builds (needed_for says which); a missing optional file is reported only when the build needs it.",
   "sets": {
     "jp-fhd": {
-      "description": "Japanese FHD release v1.1 (the game's files/ folder; the Chinese fan patch does not change these files). Source of the cut content.",
+      "description": "Japanese FHD 2023 release, unmodified (the game's files/ folder). Source of the cut content.",
       "files": {
         "SCRIPT.PAK": {
           "use": "data",
@@ -150,7 +150,7 @@
         "../CARTAGRA.exe": {
           "use": "data",
           "optional": true,
-          "needed_for": "interface translation (languages/<lang>/interface.tsv)",
+          "needed_for": "the executable fixes and the interface translation (languages/<lang>/interface.tsv)",
           "size": 6630400,
           "sha256": "e2d463e971a95236fbf15a3232515c68a138cde4869c46dff10f142761a57890"
         },
@@ -299,7 +299,7 @@
         "../CARTAGRA.exe": {
           "use": "data",
           "optional": true,
-          "needed_for": "interface translation (languages/<lang>/interface.tsv)"
+          "needed_for": "the executable fixes and the interface translation (languages/<lang>/interface.tsv)"
         },
         "image/resident/PARTS.PAK": {
           "use": "data",

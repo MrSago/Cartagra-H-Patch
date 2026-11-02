@@ -7,7 +7,7 @@ Examples:
   python build.py --language ru --check    only check the input files
   python build.py --list-languages
 
-The original game files are read from inputs/<set>/files/ (see README, "Inputs")
+The original game files are read from inputs/<set>/files/ (see README.md, "Building the Patch")
 or from the folders given with --jp-files / --target-files. Nothing is written
 outside build/ and dist/, and the game installation is never touched.
 """
@@ -37,7 +37,7 @@ def parse_args(argv):
                     help="export the interface pictures with text as PNG to the language's interface originals "
                          "(languages/_original_steam/en/images/) and copy the missing ones to languages/<lang>/images/")
     ap.add_argument("--inputs", metavar="DIR", help="folder with the input sets (default: <project>/inputs)")
-    ap.add_argument("--jp-files", metavar="DIR", help="Japanese FHD files/ folder (default: <inputs>/jp-fhd/files)")
+    ap.add_argument("--jp-files", metavar="DIR", help="Japanese FHD 2023 files/ folder (default: <inputs>/jp-fhd/files)")
     ap.add_argument("--target-files", metavar="DIR", help="target release files/ folder (default: <inputs>/<target>/files)")
     ap.add_argument("--skip-checksums", action="store_true", help="skip the SHA-256 check of the input archives (faster)")
     ap.add_argument("--no-voice", action="store_true", help="do not build VOICE.PAK (restored lines play silently)")
@@ -129,7 +129,7 @@ def main(argv=None):
             print("Input check failed:", file=sys.stderr)
             for p in problems:
                 print(f"  - {p}", file=sys.stderr)
-            print("README.md, 'Step 1: Provide the Input Files', lists the files needed and where to put them.",
+            print("README.md, 'Building the Patch', shows how to copy them; definitions/inputs.json lists every file.",
                   file=sys.stderr)
             return EXIT_FAILED
         print("  inputs OK")

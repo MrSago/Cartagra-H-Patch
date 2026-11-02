@@ -712,6 +712,42 @@ class ExeTextTests(unittest.TestCase):
         out = exe_text.apply_fixes(exe_text.translate(data, exe_text.load_table(project.load_language("ru")["interface_table"]))[0], fixes)
         self.assertEqual(exe_text.PE(out).data[exe_text.PE(out).rva_to_off(0x2f4293)], 0xEB)
 
+    def test_restore_original_text(self):
+        exe = make_exe()
+        translated = exe_text.translate(exe, self.rows(Hello="Привет"))[0]
+        back = [["0x1000", "0x2000"], ["0x1010", "0x2000"]]
+        out, n = exe_text.restore_original_text(translated, ".uitext", back)
+        self.assertEqual(n, 2)
+        self.assertEqual([k for k in range(len(exe)) if exe[k] != out[k] and not 0x98 <= k < 0x9C], [])  # + checksum
+        self.assertEqual(len(out), len(exe))
+        self.assertEqual(exe_text.restore_original_text(exe, ".uitext", back), (exe, 0))  # no section: unchanged
+        with self.assertRaisesRegex(ValueError, "1 references into .uitext are not in the list"):
+            exe_text.restore_original_text(translated, ".uitext", back[:1])
+        with self.assertRaisesRegex(ValueError, "does not point into .uitext"):
+            exe_text.restore_original_text(translated, ".uitext", back + [["0x1020", "0x2020"]])
+        with self.assertRaisesRegex(ValueError, "not an original string"):
+            exe_text.restore_original_text(translated, ".uitext", [["0x1000", "0x5000"], back[1]])
+
+    def test_original_text_restores_the_target_exe(self):
+        exe = os.path.join(project.INPUTS_DIR, "ru-steam", "CARTAGRA.exe")
+        if not os.path.isfile(exe):
+            self.skipTest("inputs/ru-steam/CARTAGRA.exe not present")
+        with open(exe, "rb") as f:
+            data = f.read()
+        spec = project.load_restoration()["exe_original_text"]
+        out, n = exe_text.restore_original_text(data, spec["section"], spec["redirects"])
+        self.assertEqual(n, 58)
+        pe = exe_text.PE(out)
+        self.assertIsNone(pe.section(b".rtransl"))
+        self.assertNotRegex(out, rb"(?:[\xd0\xd1][\x80-\xbf]){3}")  # no Russian text left
+        for ins, _ in spec["redirects"]:
+            rva = int(ins, 16)
+            target = rva + 7 + struct.unpack_from("<i", out, pe.rva_to_off(rva) + 3)[0]
+            self.assertRegex(pe.cstr(target).decode("utf-8"), r"^[ -~\n—﹣é]+$")  # the English text
+        self.assertEqual(sum(a != b for a, b in zip(data[0x400:0x650c00], out[0x400:0x650c00])), 229)  # the leas only
+        fixed = exe_text.apply_fixes(out, project.load_restoration()["exe_fixes"]["fixes"])
+        self.assertEqual(fixed[pe.rva_to_off(0x2f4293)], 0xEB)
+
     def test_check_table_problems(self):
         pe = exe_text.PE(make_exe())
         rows = self.rows(items="%s предметов")

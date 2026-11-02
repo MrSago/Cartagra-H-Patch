@@ -10,6 +10,6 @@ en/
 jp/               the Japanese interface of the Steam release (not needed yet; not made)
 ```
 
-To translate the interface into a new language, copy `en/interface.tsv` to `languages/<code>/interface.tsv`, set `"interface_original": "_original_steam/en"` in its `language.json`, and run `build.py --language <code> --export-images` to get copies of the pictures in `languages/<code>/images/`. The formats are described in the main [README](../../README.md#translating-the-interface).
+To translate the interface into a new language, copy `en/interface.tsv` to `languages/<code>/interface.tsv`, set `"interface_original": "_original_steam/en"` in its `language.json`, and run `build.py --language <code> --export-images` to get copies of the pictures in `languages/<code>/images/`. The formats are described in [languages/README.md](../README.md#interface-text-interfacetsv).
 
 Do not edit the files in `en/images/`: the build compares a language's pictures with them and replaces only the pictures that differ.

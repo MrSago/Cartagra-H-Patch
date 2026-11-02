@@ -2,7 +2,7 @@
 Build pipeline: original files in -> patch files out.
 
 Inputs (read only):
-  jp_dir      Japanese FHD release, files/ folder (input set "jp-fhd")
+  jp_dir      Japanese FHD 2023 release, files/ folder (input set "jp-fhd")
   target_dir  the Steam build the patch is for, files/ folder (input set of the language);
               its CARTAGRA.exe is read from the folder above
   languages/<lang>/translation/*.tsv  translations of restored lines (optional)
@@ -261,8 +261,9 @@ def run_build(opt, restoration, log=print):
         f"{total['todo']} untranslated) ({os.path.getsize(script_out):,} bytes)")
 
     log(f"[{steps - 1}/{steps}] Interface")
+    original_text = restoration["exe_original_text"] if lang.get("exe_original_text") else None
     interface = (0, 0) if opt.reference else _build_interface(log, opt, work, staging, files_out,
-                                                               restoration["exe_fixes"]["fixes"])
+                                                               restoration["exe_fixes"]["fixes"], original_text)
 
     log(f"[{steps}/{steps}] Output")
     _write_info(staging, opt, total, len(scenes), interface)
@@ -300,10 +301,11 @@ def _restore_start_sequence(log, restoration, jp_by, tg_by, scenes):
     log(f"  {mv['from']:12s} start sequence: {mv['movie']} removed")
 
 
-def _build_interface(log, opt, work, staging, files_out, exe_fixes=()):
+def _build_interface(log, opt, work, staging, files_out, exe_fixes=(), original_text=None):
     """
-    Translate the executable's interface strings, apply the executable fixes (restoration.json
-    "exe_fixes") and replace images. Returns (strings translated, images).
+    Restore the executable's original text (restoration.json "exe_original_text", when given),
+    translate its interface strings, apply the executable fixes (restoration.json "exe_fixes")
+    and replace images. Returns (strings translated, images).
     """
     lang = opt.language
     try:
@@ -320,6 +322,13 @@ def _build_interface(log, opt, work, staging, files_out, exe_fixes=()):
                              f"(next to its files/ folder)")
         with open(exe, "rb") as f:
             data = f.read()
+        if original_text:
+            try:
+                data, n = exe_text.restore_original_text(data, original_text["section"], original_text["redirects"])
+            except ValueError as e:
+                raise BuildError(f"{exe}: {e}") from None
+            log(f"  {EXE_NAME}: " + (f"{n} strings point to the original text again, section {original_text['section']} removed"
+                                     if n else f"no section {original_text['section']}: original text kept"))
         if any(r["translation"] for r in rows):
             try:
                 data, translated, nrefs = exe_text.translate(data, rows)

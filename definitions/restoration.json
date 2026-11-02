@@ -57,5 +57,26 @@
        "old": "74 08", "new": "eb 08",
        "why": "cSoundCodec_Ogg length-in-ms (0x2f4220) reads the rate from the channel's vorbis_info pointer, which the decoder thread replaces only after ov_open and never clears; the main thread asks right after starting a sound, so it can read the previous, freed one and divide by rate/1000 = 0. All game audio is 48000 Hz; the jump takes the function's own 48000 default"}
     ]
+  },
+  "exe_original_text": {
+    "_comment": "The Russian release's translators put the Russian prologue text into an added section .rtransl and pointed 58 lea instructions at it; the rest of its CARTAGRA.exe is the Steam original (compared with the Steam executable). Languages with exe_original_text (en) point each lea back to its original English string and remove the section; an executable without the section is left as it is. Pairs: [lea instruction RVA, original string RVA]. See TECHNICAL_NOTES.md, Strings in CARTAGRA.exe.",
+    "section": ".rtransl",
+    "redirects": [
+      ["0x2041c", "0x511460"], ["0x2047c", "0x511570"], ["0x204d3", "0x5115b8"], ["0x20533", "0x5116f0"],
+      ["0x20593", "0x511738"], ["0x2084e", "0x511c40"], ["0x20890", "0x511cd0"], ["0x208d2", "0x511ec0"],
+      ["0x20914", "0x511f30"], ["0x20956", "0x5122d0"], ["0x20998", "0x512380"], ["0x209da", "0x512660"],
+      ["0x20a1c", "0x5126b0"], ["0x20a5e", "0x512820"], ["0x20d21", "0x512b60"], ["0x21011", "0x512e30"],
+      ["0x2105b", "0x512ec0"], ["0x21316", "0x513190"], ["0x2134d", "0x5131b8"], ["0x2138f", "0x513260"],
+      ["0x213d1", "0x513278"], ["0x21413", "0x513318"], ["0x21455", "0x513328"], ["0x2171c", "0x5136b0"],
+      ["0x2175e", "0x5136e0"], ["0x217a0", "0x513850"], ["0x217e2", "0x5138a8"], ["0x21824", "0x5139d8"],
+      ["0x21866", "0x513a08"], ["0x218a8", "0x513af0"], ["0x218ea", "0x513b20"], ["0x2192c", "0x513c90"],
+      ["0x2196e", "0x513cd0"], ["0x219b0", "0x513d78"], ["0x21a1f", "0x513db8"], ["0x21a61", "0x513ec8"],
+      ["0x21aa3", "0x513ef0"], ["0x21ae5", "0x514010"], ["0x21b27", "0x514030"], ["0x21b69", "0x5140d0"],
+      ["0x21bab", "0x514100"], ["0x21bed", "0x514238"], ["0x21c2f", "0x514268"], ["0x21c71", "0x514378"],
+      ["0x21cb3", "0x5143b0"], ["0x21cf5", "0x514460"], ["0x21d37", "0x514480"], ["0x21d79", "0x514540"],
+      ["0x21dbb", "0x514558"], ["0x21dfd", "0x514630"], ["0x21e3f", "0x514658"], ["0x21e81", "0x5146f0"],
+      ["0x21ec3", "0x514708"], ["0x21f05", "0x514810"], ["0x21f47", "0x514870"], ["0x21f89", "0x514960"],
+      ["0x21fcb", "0x514990"], ["0x2200d", "0x514ac8"]
+    ]
   }
 }

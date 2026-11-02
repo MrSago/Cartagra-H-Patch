@@ -6,5 +6,6 @@
   "status": "untested",
   "status_note": "Never built: the English Steam files were not available. The same restoration rules are expected to apply (same engine and script names) but nothing has been verified. Restored scenes would show Japanese placeholder text where no English line exists.",
   "placeholder": "Untranslated lines show the Japanese original (speaker names translated when known).",
-  "interface_original": "_original_steam/en"
+  "interface_original": "_original_steam/en",
+  "exe_original_text": true
 }

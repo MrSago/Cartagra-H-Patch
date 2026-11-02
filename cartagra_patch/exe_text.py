@@ -280,6 +280,44 @@ def apply_fixes(data, fixes):
     return bytes(pe.data)
 
 
+def restore_original_text(data, section, redirects):
+    """
+    Undo a translation added the way translate() adds one: point each lea of `redirects`
+    ([instruction RVA, original string RVA] as hex strings) from `section` back to its original
+    string and remove the section. Returns (executable, number of references restored); an
+    executable without the section is returned unchanged. Raises ValueError when it does not fit.
+    """
+    pe = PE(data)
+    name = section.encode()
+    sec = pe.section(name)
+    if not sec:
+        return bytes(data), 0
+    if sec is not pe.sections[-1] or len(pe.data) != sec.raw + sec.rsize:
+        raise ValueError(f"{section} is not the last section at the end of the file")
+    inside = lambda rva: sec.va <= rva < sec.va + sec.vsize
+    for ins, orig in redirects:
+        off, target = pe.rva_to_off(int(ins, 16)), int(orig, 16)
+        if off is None or not LEA_RIP.match(pe.data, off):
+            raise ValueError(f"no lea at RVA {ins}")
+        if not inside(int(ins, 16) + 7 + struct.unpack_from("<i", pe.data, off + 3)[0]):
+            raise ValueError(f"the lea at RVA {ins} does not point into {section}")
+        if inside(target) or not pe.cstr(target):
+            raise ValueError(f"RVA {orig} is not an original string")
+        struct.pack_into("<i", pe.data, off + 3, target - (int(ins, 16) + 7))
+    left = [t for t in pe.references() if inside(t)]
+    if left:
+        raise ValueError(f"{len(left)} references into {section} are not in the list")
+    del pe.data[sec.raw:]
+    pe.data[pe.sec_table + 40 * (pe.nsec - 1) : pe.sec_table + 40 * pe.nsec] = bytes(40)
+    pe.nsec -= 1
+    pe.sections.pop()
+    struct.pack_into("<H", pe.data, pe.pe + 6, pe.nsec)
+    last = pe.sections[-1]
+    struct.pack_into("<I", pe.data, pe.opt + 56, _align(last.va + last.vsize, pe.sec_align))  # SizeOfImage
+    pe.update_checksum()
+    return bytes(pe.data), len(redirects)
+
+
 def list_strings(data):
     """[(rva, text, lea refs, abs refs)] for every UTF-8 string in .rdata that the code refers to."""
     pe = PE(data)

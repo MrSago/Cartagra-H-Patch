@@ -1,6 +1,6 @@
 # Technical Notes
 
-Working notes for reverse engineering and development of the Cartagra cut-content patch. For installation, usage and user-facing status, see [README.md](README.md). The chronological journal is [MODLOG.md](MODLOG.md).
+Working notes for reverse engineering and development of the Cartagra cut-content patch. For the build steps and the translation files, see [README.md](README.md) and [languages/README.md](languages/README.md); what the patch changes, the build options and installing are in [Patch Contents and Usage](#patch-contents-and-usage). The chronological journal is [MODLOG.md](MODLOG.md).
 
 ## Evidence Labels
 
@@ -18,6 +18,7 @@ Module names refer to `cartagra_patch/<name>.py`. Before the 2026-10-26 refactor
 ## Contents
 
 - [Summary of Findings](#summary-of-findings)
+- [Patch Contents and Usage](#patch-contents-and-usage)
 - [Game Installations in This Project](#game-installations-in-this-project)
 - [PAK Archive Format](#pak-archive-format)
 - [Resource IDs](#resource-ids)
@@ -59,18 +60,80 @@ Module names refer to `cartagra_patch/<name>.py`. Before the 2026-10-26 refactor
 11. **[V]** The Extras ending list starts 7 of its 18 endings at a script label, whose bytecode offset comes from `_scr_label`. In the Russian release those offsets still belong to the shorter English scripts and point into the middle of instructions (only 8 of 359 are instruction starts), so these endings began with garbage instead of their first instruction (user report 2026-11-02: black screen). The patch writes the table anew (see [Label table](#label-table)).
 12. **[V]** The game crashes now and then with an integer division by zero in its Ogg sound code (`0x2f42ba`; 29 crash reports on this PC from 2026-10-31 on, all at that address). It is a race in the Steam executable, not caused by the patch's data; the patch changes one byte of the executable so the code no longer reads the freed value (see [Sound Crash](#sound-crash)).
 
+## Patch Contents and Usage
+
+Moved here from README.md on 2026-11-03. The README keeps the build steps and the translation files.
+
+### What the patch changes
+
+| Content | Details |
+| --- | --- |
+| Scenes | 20 scenes that Steam rewrote are replaced by the uncensored versions; 4 removed scenes are added back ([What Steam Censored](#what-steam-censored)) |
+| CGs | 150 event CGs that Steam removed |
+| Edited pictures | 51 pictures that Steam edited (clothes added, blood, wounds and bodies hidden) are replaced by the originals ([Censored Images](#censored-images)) |
+| Voices | 1,901 voice clips of the restored scenes |
+| Game start | New Game plays the prologue and the opening movie before the first scene, as in the Japanese release; the Rengoku movie goes back before part 2 ([Start Sequence](#start-sequence)) |
+| Crash fix | One byte of `CARTAGRA.exe`: the sound code always uses the game's 48 kHz rate instead of a value that may already be freed ([Sound Crash](#sound-crash)) |
+| Ending replay | `_scr_label` is written anew, so the endings in Extras > Endings start at their first instruction ([Label table](#label-table)) |
+| Text | Restored lines use the language's tables, then an identical line of the release, otherwise the Japanese text |
+| Interface (`ru` only) | Interface strings of `CARTAGRA.exe` (296 of 297), 28 interface pictures, Cyrillic letters in FONT1, a Cyrillic `№` in FONT0, the scene headings of the save screens ([Interface Text and Images](#interface-text-and-images)) |
+
+**[V]** (2026-11-03) What each build writes:
+
+| Build | Files | Size |
+| --- | --- | --- |
+| `ru` | `CARTAGRA.exe` (interface + crash fix), `files/SCRIPT.PAK`, `files/image/EVENTCG.PAK`, `OTHCG.PAK`, `SYSCG.PAK`, `resident/PARTS.PAK`, `files/voice/VOICE.PAK`, `files/font_win32_1920/FONT0*.PAK` and `FONT1*.PAK` (12 files) | 1.9 GB |
+| `en` | `CARTAGRA.exe` (the target's original text, no translation, + crash fix), `files/SCRIPT.PAK` (restored scenes, the two picture fixes, start sequence, label table, `_arflag`; no translation), `files/image/EVENTCG.PAK`, `OTHCG.PAK`, `files/voice/VOICE.PAK` | 1.7 GB |
+
+The `en` row comes from a trial build with `--language en --target-files inputs/ru-steam/files` (the English Steam files are not available): it has no interface table, scene titles, pictures or font keys, so it writes only the restoration, the crash fix and the start sequence; 3,970 restored lines stay Japanese (452 reuse lines of the release). **[V]** Its executable has no translation either: `exe_original_text` (in `languages/en/language.json`) removes the Russian translators' `.rtransl` section when the input exe has it ([Strings in CARTAGRA.exe](#strings-in-cartagraexe)). Checked again on 2026-11-03 with the user's `inputs/en-steam/` (Russian archives, the Steam `CARTAGRA_backup.exe`): the output exe has no Cyrillic text and differs from the input only by the crash fix.
+
+Approximate sizes of the replaced files: `CARTAGRA.exe` 7 MB, `SCRIPT.PAK` 6 MB, `EVENTCG.PAK` 569 MB, `OTHCG.PAK` 341 MB, `VOICE.PAK` 807 MB; `ru` also `SYSCG.PAK` 62 MB, `resident/PARTS.PAK` 91 MB (pictures stored uncompressed as CZ0; the original is 22 MB), FONT0 80 MB, FONT1 15 MB.
+
+### Inputs
+
+The build reads only `inputs/<set>/` (or `--jp-files`, `--target-files`, `--inputs`): `jp-fhd/files/` (Japanese FHD 2023: `SCRIPT.PAK`, `image/*.PAK`, `voice/*.PAK`), `<target>/files/` (`SCRIPT.PAK`, `image/*.PAK`, `voice/*.PAK`; `image/resident/PARTS.PAK` when pictures are replaced; `font_win32_1920/FONT0*`, `FONT1*` when `font_glyphs` or `font_numero` is set) and `<target>/CARTAGRA.exe` (always needed now, for the executable fixes). `definitions/inputs.json` lists every file with size, entry count and SHA-256; the English list is an assumption (copied from `ru-steam`, no checksums). About 4.8 GB for the inputs and 2 GB for the output.
+
+### Command line
+
+| Option | Effect |
+| --- | --- |
+| `--language ru` / `en` | Language to build (required) |
+| `--check` | Only check the input files |
+| `--export-images` | Export the interface pictures as PNG for translation ([languages/README.md](languages/README.md#interface-pictures-images)) |
+| `--list-languages` | Show the languages and their status |
+| `--skip-checksums` | Skip the SHA-256 check of the inputs (sizes and entry counts are still checked) |
+| `--no-voice` | Do not build `VOICE.PAK` (restored lines play without voice) |
+| `--inputs DIR`, `--jp-files DIR`, `--target-files DIR` | Read the inputs from other folders (never from an installation the patch is in) |
+| `--scenes SCENE ...` | Testing: restore only these scenes (output `dist/<lang>-partial/`) |
+| `--test-start SCENE`, `--test-set VAR=VALUE` | Testing: New Game jumps straight into a scene, after setting game variables (output `dist/<lang>-test/`) |
+
+A `ru` build takes about 4 minutes (most of it the FONT0 re-encoding), an `en` build under a minute. On an error it prints a line starting with `error:` and exits with 1 (2 for usage errors). Intermediate files go to `build/<lang>/`; `dist/<lang>/` is replaced only when a build succeeds; two builds from the same inputs give identical files.
+
+### Installing and removing
+
+The build installs nothing. Copy the contents of `dist/<lang>/` into the game folder (`CARTAGRA.exe` next to the game's `CARTAGRA.exe`, `files/` into `files/`), after backing up the files `BUILD_INFO.txt` lists and the saves. For example (`cmd.exe`):
+
+```bat
+robocopy "dist\ru" "D:\Games\Cartagra-2026-RU-Final" /E /XF BUILD_INFO.txt
+```
+
+To remove the patch, copy the same files back from the backup or from `inputs/<target>/`. If an old version installed `files/image/EVENTCG_SAVE.PAK`, delete it.
+
+Saves: the Russian release keeps them in `%APPDATA%\GSE Saves\4290390` (the bundled Steam emulator; the empty `userdata` folder of the game is not used), including the read-text and choice records in `remote\data000.dat` ([Read Flags and Saves](#read-flags-and-saves)). Saves made inside a restored scene or inside `0216-04-03`, `0216-05-02`, `0217-01-04`, `0217-99-03`, `0208-15-00`, `0210-07-00` and the start-sequence scripts may not load correctly after installing or removing the patch.
+
 ## Game Installations in This Project
 
-All paths are relative to the project root `Cartagra-Patch/`.
+All paths are relative to the project root `Cartagra-Patch/`. Folder layout since 2026-11-03 (the user renamed and split the folders; older entries of [MODLOG.md](MODLOG.md) use the old names given in brackets):
 
 | Directory | What it is |
 | --- | --- |
-| `Cartagra2023RUS/` | Russian 2026 release by Innocence translations and The Hounds of God (Steam build, app ID 4290390, with a Goldberg-type Steam emulator in `steam_settings/`, `language=english`). Target. Executable `CARTAGRA.exe` (window title "CARTAGRA - Ver.1.0.0.1") |
-| `Cartagra_FHD_CHS_GAME_v1.1/` | Japanese FHD release v1.1 with the Chinese fan patch. Source of the cut content |
-| `Cartagra_FHD_CHS/` | Source code of the Chinese fan patch |
+| `Cartagra-2023-JP/` | Japanese FHD 2023 release (カルタグラ FHD, `カルタグラ FHD.exe`), unmodified. Source of the cut content. **[V]** (2026-11-03) its 12 input archives have the sizes and SHA-256 recorded for `jp-fhd` in `definitions/inputs.json` (the copies in `Patch/inputs/jp-fhd/` came from the same release, earlier installed with the Chinese fan patch in `Cartagra_FHD_CHS_GAME_v1.1/`; that patch reads its own files from `CHSPAK\` and leaves these archives unchanged) |
+| `Cartagra-2026-RU-Steam/` | Russian 2026 release by Innocence translations and The Hounds of God (Steam build, app ID 4290390, with a Goldberg-type Steam emulator in `steam_settings/`, `language=english`), unmodified. Target of `ru`. Executable `CARTAGRA.exe` (window title "CARTAGRA - Ver.1.0.0.1"). **[V]** (2026-11-03) its files match the `ru-steam` checksums |
+| `Cartagra-2026-RU-Final/` | The Russian release with the patch installed (was `Cartagra2023RUS/`); its `BUILD_INFO.txt` names the installed build. Used for the in-game tests |
 | `Patch/` | This project (git repository) |
-| `Patch/inputs/` | Local copies of the original files the build reads (outside git): `jp-fhd/files/` from `Cartagra_FHD_CHS_GAME_v1.1/files/`; `ru-steam/files/` from `backup/orig/` (the four replaced archives) plus the unmodified index-only archives of `Cartagra2023RUS/files/`. The build never reads the installations themselves |
-| `backup/` | Pristine copies of the RUS files the patch replaces (`backup/orig/`) and save backups (`backup/saves/`). Outside git |
+| `Patch/inputs/` | Local copies of the original files the build reads (outside git): `jp-fhd/files/` from `Cartagra-2023-JP/files/`; `ru-steam/` from `Cartagra-2026-RU-Steam/`. The build never reads the installations themselves |
+
+The source code of the Chinese fan patch (`Cartagra_FHD_CHS/`, from [HIllya51/Cartagra_FHD_CHS](https://github.com/HIllya51/Cartagra_FHD_CHS)) was used as a reference (see [The Chinese Patch](#the-chinese-patch-reference-implementation)); it is no longer kept here. The old `backup/` folder (pristine Russian files in `backup/orig/`, save backups in `backup/saves/`) is gone too: `Cartagra-2026-RU-Steam/` and `Patch/inputs/ru-steam/` hold the pristine files.
 
 ### Archives present
 
@@ -104,9 +167,9 @@ All paths are relative to the project root `Cartagra-Patch/`.
 
 ### Current install state
 
-**[V]** As of 2026-10-26 the **full patch is installed**: `Cartagra2023RUS/files/image/EVENTCG.PAK`, `files/image/OTHCG.PAK`, `files/voice/VOICE.PAK` and `files/SCRIPT.PAK` are identical to the output of the old `build_patch.py`, which is byte-identical to `Patch/dist/ru/files/...` from `build.py --language ru` (SHA-256 prefixes: SCRIPT `578b31f79f8d8a8b`, EVENTCG `a390601d1758eee6`, OTHCG `46ddcb03fb3a6a90`, VOICE `d1ddf178abbee528`). The originals are in `backup/orig/` (SHA-256 prefixes: EVENTCG `8f2a9b21300cb3fa`, OTHCG `477b30ba8f36e5e9`, VOICE `42e87d76474c8ae6`, SCRIPT `c33dd504c40a120f`).
+**[V]** (2026-11-03) `Cartagra-2026-RU-Final/` has the `ru` build installed; its `BUILD_INFO.txt` lists the SHA-256 of every installed file. The pristine originals are in `Cartagra-2026-RU-Steam/` (SHA-256 prefixes: EVENTCG `8f2a9b21300cb3fa`, OTHCG `477b30ba8f36e5e9`, VOICE `42e87d76474c8ae6`, SCRIPT `c33dd504c40a120f`, `CARTAGRA.exe` `e2d463e971a95236`).
 
-**[V]** `Cartagra2023RUS/` also contained `CARTAGRA_backup.exe` (6,856,704 B) next to `CARTAGRA.exe` (6,630,400 B); this project did not create either, and on 2026-10-26 only `CARTAGRA.exe` was there. **[V]** `CARTAGRA.exe` is the Russian release's own executable: it has an extra section `.rtransl` with the Russian prologue text (see [Interface Text and Images](#interface-text-and-images)); SHA-256 `e2d463e9...` is recorded in `definitions/inputs.json`.
+**[V]** `Cartagra-2026-RU-Steam/` also contains `CARTAGRA_backup.exe` (6,856,704 B) next to `CARTAGRA.exe` (6,630,400 B); this project did not create either. `CARTAGRA.exe` is the Russian release's own executable: it has an extra section `.rtransl` with the Russian prologue text (see [Interface Text and Images](#interface-text-and-images)).
 
 ## PAK Archive Format
 
@@ -448,7 +511,7 @@ The empty `userdata\22202\` folder in the game folder is created by the emulator
 
 **[V]** Each string is loaded by `lea r64, [rip+disp32]` (`48`/`4C` `8D`, ModRM `05`..`3D`); a string used in several places has several loads. The month names of the save screen are read from a pointer table in `.data` (absolute addresses, DIR64 base relocations). `exe_text.PE.references()` finds both kinds.
 
-**[V]** The Russian translators used the same method for the 58 strings of the prologue text: a section `.rtransl` (RVA 0x194E000, 0x2000 B) with Russian UTF-8 strings, each loaded by a redirected `lea`.
+**[V]** The Russian translators used the same method for the 58 strings of the prologue text: a section `.rtransl` (RVA 0x194E000, 0x2000 B) with Russian UTF-8 strings, each loaded by a redirected `lea`. **[V]** (2026-11-03) Compared with the Steam executable (`CARTAGRA_backup.exe` in `Cartagra-2026-RU-Steam/`: the same sections plus Steam's `.bind` wrapper instead of `.rtransl`, `.text` not encrypted), the Russian `CARTAGRA.exe` differs only in the displacements of those 58 `lea` instructions; the original English strings are still in `.rdata`, unreferenced. `restoration.json` `exe_original_text` lists each `lea` with its original target (read from the Steam executable), and `exe_text.restore_original_text` points them back and removes the section: the result is byte-identical to the Steam executable in every section. The `en` build does this (language key `exe_original_text`), so a Russian exe in `inputs/en-steam/` gives an English one; an exe without `.rtransl` is used as it is.
 
 **[V]** The table `languages/_original_steam/en/interface.tsv` (297 strings since 2026-11-03, with `No.%d`) was made from the Steam (Russian) release's executable only:
 
@@ -634,13 +697,13 @@ Repository contents: `pak.py`, `SCRIPT.PAK`, `SCRIPT_FHD/` (`solvev2.py` text ex
 
 ## Patch Generation
 
-`pipeline.run_build` (started by `build.py`, see [README.md](README.md#step-2-build)). `<target>` is the input set of the language (`inputs/ru-steam/files/` for `ru`), `<jp>` is `inputs/jp-fhd/files/`:
+`pipeline.run_build` (started by `build.py`, see [Command line](#command-line)). `<target>` is the input set of the language (`inputs/ru-steam/files/` for `ru`), `<jp>` is `inputs/jp-fhd/files/`:
 
 1. **EVENTCG**: read `<target>/image/EVENTCG.PAK`, append the JP-only entries (`lucapak.append_missing`: parents remapped by name, xxh64 computed), replace the censored entries in place (`replace_from`) and append the split copy `e047_jp` (`append_copy`). Untouched entries are byte-identical and in their original order (verified).
    **OTHCG**: replace the 16 censored pictures in place.
 2. **VOICE**: the same for `VOICE.PAK` with `VOICE0.PAK` as donor, copying section values.
 3. **SCRIPT**: build the name maps (images over all target image archives with the new EVENTCG; voices with the new VOICE; variables from `_varname`), the translation memory and the first free select slot. Port the 24 scenes, check every jump target, write the translation tables, retarget the 4 predecessor JUMPs and insert the 4 new scenes before the metadata entries. Then apply the two target script fixes for censored pictures and restore the [start sequence](#start-sequence) (3 scripts). Write `_scr_label` anew ([Label table](#label-table)), translate the scene headings in `_varstr` ([Scene titles](#scene-titles)) and finally recompute `_arflag` for all scripts ([Read Flags and Saves](#read-flags-and-saves)). 242 of the 274 original entries stay byte-identical (2026-11-03).
-4. **Interface**: read `<target>/../CARTAGRA.exe`, translate its strings when `languages/<lang>/interface.tsv` has translations (see [Interface Text and Images](#interface-text-and-images)), apply the executable fixes of `restoration.json` ([Sound Crash](#sound-crash)) and write it; write the table to `build/<lang>/interface.tsv`. Replace the pictures in `languages/<lang>/images/<archive>/` that differ from the exported originals in `languages/<interface_original>/images/` (byte comparison of the PNG files; without an exported original the pixels are compared). Archives already written by step 1 are modified there, others are read from `<target>/image/`; an archive is written only if a picture in it changed.
+4. **Interface**: read `<target>/../CARTAGRA.exe`, restore its original text when the language has `exe_original_text`, translate its strings when `languages/<lang>/interface.tsv` has translations (see [Interface Text and Images](#interface-text-and-images)), apply the executable fixes of `restoration.json` ([Sound Crash](#sound-crash)) and write it; write the table to `build/<lang>/interface.tsv`. Replace the pictures in `languages/<lang>/images/<archive>/` that differ from the exported originals in `languages/<interface_original>/images/` (byte comparison of the PNG files; without an exported original the pixels are compared). Archives already written by step 1 are modified there, others are read from `<target>/image/`; an archive is written only if a picture in it changed.
 5. **Output**: write `BUILD_INFO.txt` and move the staging folder to `dist/<lang>/`.
 
 **Obsolete (moved to `local/legacy/`, outside git, on 2026-10-26):** `pak_tool.py`, `create_patch.py`, `Patch/create_patch.py` and their outputs (`EVENTCG_patched.PAK`, `EVENTCG_patched/`, `PATCH_REPORT.md`). `pak_tool.py pack` rewrites the header (`id_start` = 1, sections dropped, entries sorted), which caused the bug. `create_patch.py` also replaced only `[:5]` of the 27 size-different files while reporting 27. The useful parts of `pak_tool.py` (`unpack`, `compare`) are now `lucapak` commands; there is deliberately no `pack` command.
@@ -719,6 +782,8 @@ Test setup: `CARTAGRA.exe`, window resized to 1280×720 (on a 2048×1280 screen 
 | 2026-10-26 | interface translation | Start-up notice, Options, dialogs, replacement picture | **[V]** Russian text shown and fits; small-font labels kept English; replacement picture shown (see [Interface Text and Images](#interface-text-and-images)) |
 | 2026-11-02 | label table written anew | Extras > Endings: Nana's Delight, Light in the Darkness, Epilogue (labels), Powerless | **[V]** each starts at its ending scene and advances; no black screen, memory steady; back to the list (see [Label table](#label-table)) |
 | 2026-10-26 | `_arflag` fix, test start `0217-01-05h` | Skip read text, remembered choice, system data | **[V]** SKIP stops at the first unread line; the chosen option is marked; records of the added scenes saved (see [Read Flags and Saves](#read-flags-and-saves)) |
+| 2026-11-02 | translated interface pictures and FONT1 letters | Title and Extras menus, options tabs, system menu, in-game buttons, screen headings, save and load screens, scene date label, bottom bars | **[V]** Russian shown, words whole (see [Interface pictures](#interface-pictures), [Fonts](#fonts)); not seen: the "Jump" indicators, SAVE/LOAD side labels, `CONFIG_TAB1_en`, Extras subpages |
+| 2026-11-03 | translated `_varstr` | Load screen | **[V]** heading «6 февраля» (user's screenshot); the redrawn `№` not seen yet |
 
 The 4 scenes added last (`0210-10-00`, `0214-05-00`, `0215-03-00`, `0215-05-02`) went through the same automatic checks but have not been played in game.
 
@@ -733,7 +798,7 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 | Archives | xxHash64 test vectors; byte-identical PAK round trip (also with a name prefix such as `PARTS/`); appending keeps the IDs of existing entries and remaps parent IDs by name; in-place replacement keeps the ID |
 | Scripts | `_arflag` counts (lines incl. op 43, select bit ranges, markers) and record rebuild (stale record fixed, metadata record kept, missing record appended); jump targets relocated after inserting an odd-length instruction; `LZW\0` entry round trip; label table: line rule, instruction alignment (removed instruction maps to the next), rebuild (stale target offset corrected through an inserted instruction, JP labels followed through a port with a dropped op, target-only label placed after the same message, new script gets a line, clear errors when a label cannot be placed); scene headings (`_varstr`): read, round trip, translation of the English slot only (padding of odd-length records kept), unknown table row rejected, table file (duplicate rejected), the `ru` table translates all 58 headings of `inputs/ru-steam` (when present); start sequence: call inserted after the setup instructions, movie block cut (jumps redirected, marker IDs renumbered), calls replaced by the movie (jumps land on it) |
 | Images | CZ4 decode of an image made by a test encoder (2 LZW blocks, delta bands); alpha compositing; CZ0 encode/decode keeps the placement fields; PNG reader (RGBA, RGB, palette with transparency; filters 0-4) and PNG round trip; replacement pictures in a build (archive entry replaced and its hash updated, other entries kept; wrong size and unknown entry rejected); picture export by name and pattern, copies never overwritten, unedited copies skipped (no archive written, no input needed), pixel comparison without exported originals; `images.tsv` matches the Steam archives (when present); fonts: letters copied into a smaller font set (`add_glyphs`: indices, scaled widths, cells drawn), `№` redrawn (`redraw_numero`: other cells unchanged, narrowed N, raised o, bar, width entry; missing glyph rejected) |
-| Interface text | synthetic PE: `lea` and relocated-pointer references, translation into `.uitext` (references redirected, originals kept, `SizeOfImage`, second run rejected, empty table = unchanged); table checks (placeholders, duplicate id, wrong original, id outside the file); table round trip; the `ru` and original tables fit `inputs/ru-steam/CARTAGRA.exe` (when present); executable fixes (bytes and checksum changed, second run and RVA outside the sections rejected; the `restoration.json` fixes fit `inputs/ru-steam/CARTAGRA.exe` after the translation, when present) |
+| Interface text | synthetic PE: `lea` and relocated-pointer references, translation into `.uitext` (references redirected, originals kept, `SizeOfImage`, second run rejected, empty table = unchanged); table checks (placeholders, duplicate id, wrong original, id outside the file); table round trip; the `ru` and original tables fit `inputs/ru-steam/CARTAGRA.exe` (when present); executable fixes (bytes and checksum changed, second run and RVA outside the sections rejected; the `restoration.json` fixes fit `inputs/ru-steam/CARTAGRA.exe` after the translation, when present); original text: a translation section undone (equal to the original apart from the checksum; no section = unchanged; missing, wrong and foreign entries rejected), `exe_original_text` on `inputs/ru-steam/CARTAGRA.exe` (58 references, no `.rtransl`, no Cyrillic, only the `lea` bytes changed, the crash fix still applies; when present) |
 | Translation tables | write/read round trip with escapes and the five-column header; older formats (`source`/`existing`/`translation`, `ru_existing`/`ru`); missing table |
 | Languages and paths | every language has a valid status and an existing input set; `en` is not `complete`; unknown language rejected; project paths are absolute and independent of the working directory; output names `ru`, `ru-partial`, `ru-test` |
 | Input validation | missing folder and files; wrong entry count; wrong size; changed data detected by SHA-256 and skipped with `verify_checksums=False`; optional files required only when needed; executable header and checksum |
@@ -758,6 +823,10 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 10. 21 of the 24 restored scenes have not been played in game.
 11. Read lines and chosen options are written to disk only when saving (game behaviour; see [Read Flags and Saves](#read-flags-and-saves)).
 12. Interface: `BGM`/`SE`/`MOVIE` stay English; character names on the Voice page (`PARAM.PAK` `_voice_param`) are not translated; the manual pages and the key names are English. The labels drawn with FONT1 (bottom bar, slider labels, version, save date) rely on the letters the build adds to that font (seen in game with the Mincho face only). The voice collection and the music and ending titles have not been seen in game. The translated scene headings are seen in game (2026-11-03); the redrawn `№` of the slot number is not yet; saves made before the patch keep their English heading ([Scene titles](#scene-titles)).
+13. In `0210-99-01` (not ported) the Russian release shows Steam's substitute picture `e047` just before the restored scene; it is kept ([Censored Images](#censored-images)).
+14. Chosen options are drawn in another colour only with Options > Text1 > "Color of Previously Read Text" set to "Only Choices" or "On"; with "Off" the game remembers them but does not mark them ([Read Flags and Saves](#read-flags-and-saves)).
+15. `ru` interface pictures: the title menu buttons are cut to the width of the English words, so the Russian words there are smaller (about 0.6 of the English size); the save and load headings must leave room for the slot number (SAVE is ЗАПИСЬ, ЗАГРУЗКА is smaller than LOAD). The right-hand bottom label is "Назад" rather than "Закрыть": the box keeps the English width.
+16. The `en` build has never been made with the English Steam files or tested; its file list and checksums are not known. There is no installer.
 
 ## Open Questions
 
