@@ -32,6 +32,7 @@ Module names refer to `cartagra_patch/<name>.py`. Before the 2026-10-26 refactor
 - [EVENTCG.PAK Comparison](#eventcgpak-comparison)
 - [Censored Images](#censored-images)
 - [CG Gallery](#cg-gallery)
+- [Scene Replay](#scene-replay)
 - [Voice, Music and Sound Effects](#voice-music-and-sound-effects)
 - [Sound Crash](#sound-crash)
 - [CZ4 Image Format and Engine](#cz4-image-format-and-engine)
@@ -339,10 +340,10 @@ Result for `ru`: 400 labels, all instruction starts; 351 of the target's offsets
 | 63 | 64 | 70 | 71 | 115 | 117 |
 | 71 | 72 | 73 | 74 | 117 (movie) | 119 |
 | 74 | 75 | 78 | 79 | 121 | 123 |
-| 122 | 124 | 132 | 138 | 129, 130 | **none: dropped** |
+| 122 | 124 | 132 | 138 | 129, 130 | 131, 132: **dropped by the porter** |
 | 62 | 63 | 118 (mark CG as seen) | 120 | | |
 
-JP 130 sets a save thumbnail from `EVENTCG_SAVE.PAK` (argument = EVENTCG_SAVE ID); JP 129 appears at scene ends (**[H]** scene-replay marker). Neither exists in the RUS build. A jump that targets a dropped instruction is redirected to the next kept one.
+JP 130 sets a save thumbnail from `EVENTCG_SAVE.PAK` (argument = EVENTCG_SAVE ID); JP 129 ends a scene of the scene replay. **[V]** (2026-11-03) The Steam executable's instruction name table (RVA 0x4D4060, 137 names) lists them as 131 `SCENE_REPLAY_END` and 132 `SAVE_THUMBNAIL`, but no RUS script uses either, so the porter still drops them ([Scene Replay](#scene-replay)). A jump that targets a dropped instruction is redirected to the next kept one.
 
 ### Argument changes
 
@@ -695,6 +696,21 @@ The JP release shows 18 pages in game (user's screenshot) for its 254 slots; why
 
 **[V]** In game: 18 pages and the previously unlocked CGs (user's screenshot of page 7, with only `PARAM.PAK`). The rebuilt previews are not seen in game yet.
 
+## Scene Replay
+
+**[V]** (2026-11-03, static analysis of both executables; nothing changed yet) The JP release has Extras > SCENEgallery (3 pages of 10, user's screenshot "2/24"); the Steam release has no such screen.
+
+| | JP (`カルタグラ FHD.exe`, 32-bit) | Steam (`CARTAGRA.exe`, 64-bit) |
+| --- | --- | --- |
+| Screen | class `task::cSceneReplay` (RTTI) | absent; the Extras classes are `cCGGallery`, `cEndingList` and the music and movie screens |
+| Scene list | 24 script names compiled in (file offset 0x437380): the H-scenes, i.e. the 24 restored scenes except `0215-05-02`, plus `0207-00-00` (kept by Steam) | absent |
+| Previews | `SYSCG.PAK` `sam_scene01`-`03` (a sheet per page), `sam_scene_eh078` | absent |
+| End of scene | op 129 `SCENE_REPLAY_END` at the end of 25 scripts | op 131 `SCENE_REPLAY_END` is still implemented (jump table at RVA 0x1F753C, handler 0x1F72F5), but no script uses it |
+
+What the Steam handler of op 131 does: it waits while a sound condition holds, then sets a "scene seen" bit for the current script number (`0x1B78A0`; bits 0..999 of the system save, next to the CG seen flags), and if the game is in a replay mode (global at RVA 0x165D648 in 1..5) it sets that global to 2 and stops the script, which returns to the menu. Op 132 is a no-op. Without op 131 in the scripts the Steam build never records which scenes were seen.
+
+The Extras > Endings list is the closest thing Steam has: a table compiled into the executable (built by code at RVA 0x160E0, 18 entries of number, a flag ID from 0x2F00, script, label and Japanese, English and Chinese titles) whose entries start a script at a label and return to the list. Ways to get a scene replay back are compared in MODLOG.md (2026-11-03, session 22).
+
 ## Voice, Music and Sound Effects
 
 **[V]** `VOICE.PAK`: 8,179 clip names are common, 1,901 exist only in JP `VOICE0.PAK`, and 4 only in RUS (`nur0006a`, `nur0006b`, `shu5001`, `tyu0008`). Same names have different IDs. The patch appends the 1,901 clips (IDs 8184–10084) and copies their `0x01`/`0x04` section values. Ported MESSAGEs get their voice IDs remapped by name; no ported line references an unmapped clip.
@@ -852,7 +868,7 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 2. **[?]** Saves made inside the 24 changed scenes, the 4 retargeted predecessors or the 3 start-sequence scripts (`0000-op1`, `0209-08-00`, `0308-02-00`) may break after installing or removing the patch (they store positions in scripts whose layout changed). Not tested.
 3. **[H]** New select flag slots (197+) assume the engine's flag array is large enough. The JP build uses slots up to 229 (plus its options), and the in-game choice test worked.
 4. Save thumbnails for restored scenes are not set (JP op 130 dropped); `EVENTCG_SAVE.PAK` is unused.
-5. The Extras CG gallery lists the restored CGs since 2026-11-03 (18 pages seen in game; the rebuilt previews not yet). Their pictures unlock only when their scenes are played with the new gallery installed: playing them before did not set their seen flags. JP `f022b` and `f022j` are not in the gallery (the patch does not add them to `OTHCG.PAK`; no restored scene shows them). The scene replay (Extras > SCENEgallery) is not studied (JP op 129 dropped).
+5. The Extras CG gallery lists the restored CGs since 2026-11-03 (18 pages seen in game; the rebuilt previews not yet). Their pictures unlock only when their scenes are played with the new gallery installed: playing them before did not set their seen flags. JP `f022b` and `f022j` are not in the gallery (the patch does not add them to `OTHCG.PAK`; no restored scene shows them). There is no scene replay: the Steam executable has no such screen ([Scene Replay](#scene-replay)).
 6. `0210-10-00` and `0215-03-00` show the Japanese date eyecatch instead of the English one the RUS build uses.
 7. Steam-only Russian lines inside censored scenes are dropped with the Steam rewrite.
 8. Restored pictures: the JP 4368×2457 pan image `e007k0` is not used (the RUS script shows the static uncensored `e007` instead), and Steam's own frame `e007k0` is no longer shown.
@@ -868,15 +884,15 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 ## Open Questions
 
 - Do saves inside changed scripts survive? (Test: save in a ported scene, reload.)
-- How does the scene replay (Extras > SCENEgallery) choose its scenes, and can the restored scenes be added?
-- What exactly are JP op 129 and the RUS MESSAGE tail value?
+- How do the ending list and the replay mode start a script and return (the routine a scene replay would call)?
+- What exactly is the RUS MESSAGE tail value?
 - Where did `CARTAGRA_backup.exe` come from? (`CARTAGRA.exe` is the Russian release's executable with its `.rtransl` section.)
 
 ## Roadmap
 
 1. Check the added Russian lines in game; proofread them (see [Text for the Russian slot](#text-for-the-russian-slot)).
 2. Play through the remaining 21 restored scenes; test saves and loads.
-3. Check the restored CGs in the gallery in game; investigate the scene replay so restored scenes are listed.
+3. Check the restored CGs in the gallery in game; choose a way to bring back a scene replay ([Scene Replay](#scene-replay)).
 4. Translate the text inside restored CG images and the manual pages (`MANUAL`, `MANUAL_DECK`); the other interface pictures are translated (`tools/image_text.py`).
 5. Get the English Steam files, record their checksums in `definitions/inputs.json`, build `en` and test it.
 6. An installer with version checks and rollback.

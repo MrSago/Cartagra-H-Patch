@@ -235,3 +235,16 @@ Single-player VN, no anti-cheat.
 - User (screenshots): 18 pages shown, but previews do not match: page 7 slot 4 shows one picture and opens `eh029`; "almost every CG". Cause: `image/SYSCG2.PAK` holds one preview per slot, taken by ID 63000 + slot number (Steam 185 entries, JP 254), so every slot after the first new one showed another slot's preview.
 - `gallery.build_previews`: `SYSCG2.PAK` in the merged order; Steam previews reused, the 74 new slots get the JP preview of their JP slot, visible 306x170 scaled to 301x169 (`cztool.resize`, pure Python, 0.2 s each), CZ0 with Steam's header, black margin. Page 7 checked by eye: slot 4 is now `eh029`. JP previews of H-scenes carry white blobs (as shipped). 52 tests pass; `ru` and `en` build (same `SYSCG2.PAK`). Not yet installed or seen in game.
 - With the user's OK: the new `SYSCG2.PAK` (from `dist/ru/`, same as `en`) copied into `Cartagra-2026-RU-Final/files/image/`; the replaced one equals `Cartagra-2026-RU-Steam/files/image/SYSCG2.PAK`. `PARAM.PAK` there is current. Not yet seen in game.
+
+## 2026-11-03 session 22: scene replay (research only)
+
+- User: committed the gallery work (previews confirmed in game). Asked whether the JP Extras > SCENEgallery can be restored; options first.
+- JP exe: class `cSceneReplay`, a compiled-in list of 24 script names (the H-scenes; = the 24 restored scenes minus `0215-05-02`, plus `0207-00-00`), previews `SYSCG/sam_scene01..03` + `sam_scene_eh078`, op 129 at the end of 25 scripts.
+- Steam exe: no `cSceneReplay`, no list, no previews, no Extras entry. Kept: op 131 `SCENE_REPLAY_END` (= JP 129; name table RVA 0x4D4060) is implemented: waits for a sound condition, sets the per-script "scene seen" bit (0x1B78A0, 1,000 bits in the system save), and in replay mode (global 0x165D648 in 1..5) sets it to 2 and stops. Op 132 `SAVE_THUMBNAIL` is a no-op. No Steam script uses 131/132 (also not `0207-00-00`, `0210-12-02`, which have it in JP). The porter drops JP 129/130; TECHNICAL_NOTES said they did not exist in RUS: corrected.
+- Endings list: table built by code at 0x160E0 (18 entries: number, flag ID 0x2F00+, script, label, JP/EN/CN titles); starts a script at a label and returns to the list.
+- Options given to the user (none implemented):
+  1. Port JP op 129 as op 131 in the restored scenes (data only): records seen scenes in the system save as JP did. Prerequisite for any menu; risk: op 131 ends the script if the replay-mode global is 1..5 during normal play (not expected, must be tested).
+  2. Scenes as extra pages of the CG gallery (the user's idea, reusing the gallery screen): previews cut from `sam_scene*`, a picture per scene whose seen flag the scene sets (op 120 at its end), and one exe hook in the gallery's open-slot code that starts the scene in replay mode instead of the CG viewer. Needs the ending list's start-replay routine (not yet found).
+  3. Add the scenes to Extras > Endings: replay and return already work there, but the list is compiled C++ code and its screen may not hold 42 rows.
+  4. A separate SCENE screen copied from the CG gallery (new Extras button, new task in machine code): the most work and risk.
+  5. A proxy DLL (like the Chinese patch's `CHSpatch.dll`) drawing a new screen: flexible, but a new code base and toolchain.
