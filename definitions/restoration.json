@@ -49,5 +49,13 @@
     "prologue": "0000-op0_HD",
     "moved_movie": {"movie": "cartagra_movie_01", "from": "0209-08-00", "to": "0308-02-00"}
   },
-  "new_game_script": "0000-op1"
+  "new_game_script": "0000-op1",
+  "exe_fixes": {
+    "_comment": "Byte patches of the target executable (RVA, original bytes, new bytes); the build stops if the original bytes differ. See TECHNICAL_NOTES.md, Sound Crash.",
+    "fixes": [
+      {"name": "sound length uses 48000 Hz instead of a stale vorbis_info (division by zero)", "rva": "0x2f4293",
+       "old": "74 08", "new": "eb 08",
+       "why": "cSoundCodec_Ogg length-in-ms (0x2f4220) reads the rate from the channel's vorbis_info pointer, which the decoder thread replaces only after ov_open and never clears; the main thread asks right after starting a sound, so it can read the previous, freed one and divide by rate/1000 = 0. All game audio is 48000 Hz; the jump takes the function's own 48000 default"}
+    ]
+  }
 }

@@ -78,12 +78,16 @@ def interface_translated(lang):
         raise BuildError(str(e))
 
 
-def needed_optional_inputs(lang):
-    """Optional input files (keys of definitions/inputs.json) this language's build reads."""
+def needed_optional_inputs(lang, restoration=None):
+    """
+    Optional input files (keys of definitions/inputs.json) this language's build reads;
+    with `restoration`, also the executable when it has executable fixes.
+    """
     from .fonts import input_files
     from .images import changed_images
 
-    needed = ["../CARTAGRA.exe"] if interface_translated(lang) else []
+    exe_fixes = restoration and restoration["exe_fixes"]["fixes"]
+    needed = ["../CARTAGRA.exe"] if exe_fixes or interface_translated(lang) else []
     needed += input_files() if lang.get("font_glyphs") else []
     return needed + [f"image/{arch}.PAK" for arch in changed_images(lang)]
 

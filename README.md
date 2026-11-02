@@ -24,6 +24,7 @@ Technical details, file formats and reverse-engineering notes are in [TECHNICAL_
 | CGs | 150 event CGs that Steam removed |
 | Edited pictures | 51 pictures that Steam edited (clothes added, blood, wounds and bodies hidden) are replaced by the originals |
 | Voices | 1,901 voice clips of the restored scenes |
+| Crash fix | The game could crash at random moments (division by zero in its sound code, a race when a sound starts). The patch changes one byte of `CARTAGRA.exe` so that code always uses the game's 48 kHz rate instead of a value that may already be freed |
 | Ending replay | In the Russian release, 7 of the 18 endings in Extras > Endings (Nana's Delight, Rin's Joy, Light in the Darkness, Toji's Love, Epilogue, Departure, True End) start in the middle of a script instruction and show a black screen: the table of script labels still has the positions of the shorter English scripts. The patch writes the table anew |
 | Text | Restored lines use the language's translation tables, then the existing translation where the same line exists elsewhere in the game; lines with neither show the Japanese text |
 | Interface (Russian) | The menus, options, dialogs, music and ending titles that the Russian release left in English are translated into Russian (277 of 296 strings in `CARTAGRA.exe`; tested in game). The interface pictures with text (title menu, tabs, system menu, buttons, labels, tagline) can be translated by a script from your own copy of the game (see [Interface pictures](#interface-pictures)); the manual pages stay English |

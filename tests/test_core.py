@@ -620,6 +620,29 @@ class ExeTextTests(unittest.TestCase):
             exe_text.translate(out, self.rows(Hello="x"))
         self.assertEqual(exe_text.translate(exe, self.rows()), (exe, 0, 0))
 
+    def test_apply_fixes(self):
+        exe = make_exe()
+        fix = {"name": "lea -> mov", "rva": "0x1000", "old": "48 8d", "new": "48 8b"}
+        out = exe_text.apply_fixes(exe, [fix])
+        self.assertEqual(out[0x400:0x402], b"\x48\x8b")
+        self.assertEqual([k for k in range(len(exe)) if exe[k] != out[k] and not 0x98 <= k < 0x9C], [0x401])  # + checksum
+        self.assertEqual(exe_text.apply_fixes(exe, []), exe)
+        with self.assertRaisesRegex(ValueError, "'lea -> mov': expected 48 8d at RVA 0x1000"):
+            exe_text.apply_fixes(out, [fix])  # already applied / other executable
+        with self.assertRaises(ValueError):
+            exe_text.apply_fixes(exe, [dict(fix, rva="0x9000")])  # outside the sections
+
+    def test_restoration_exe_fixes_fit_the_target_exe(self):
+        exe = os.path.join(project.INPUTS_DIR, "ru-steam", "CARTAGRA.exe")
+        if not os.path.isfile(exe):
+            self.skipTest("inputs/ru-steam/CARTAGRA.exe not present")
+        with open(exe, "rb") as f:
+            data = f.read()
+        fixes = project.load_restoration()["exe_fixes"]["fixes"]
+        self.assertTrue(fixes)
+        out = exe_text.apply_fixes(exe_text.translate(data, exe_text.load_table(project.load_language("ru")["interface_table"]))[0], fixes)
+        self.assertEqual(exe_text.PE(out).data[exe_text.PE(out).rva_to_off(0x2f4293)], 0xEB)
+
     def test_check_table_problems(self):
         pe = exe_text.PE(make_exe())
         rows = self.rows(items="%s предметов")

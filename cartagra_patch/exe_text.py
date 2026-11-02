@@ -263,6 +263,23 @@ def translate(data, rows):
     return bytes(pe.data), len(todo), redirected
 
 
+def apply_fixes(data, fixes):
+    """
+    Return the executable with the byte patches `fixes` applied: dicts with "name", "rva" (hex
+    string) and "old"/"new" (hex bytes). Raises ValueError when a fix does not find its original bytes.
+    """
+    pe = PE(data)
+    for fix in fixes:
+        old, new = bytes.fromhex(fix["old"]), bytes.fromhex(fix["new"])
+        off = pe.rva_to_off(int(fix["rva"], 16))
+        if len(old) != len(new) or off is None or pe.data[off:off + len(old)] != old:
+            raise ValueError(f"executable fix {fix['name']!r}: expected {fix['old']} at RVA {fix['rva']}")
+        pe.data[off:off + len(new)] = new
+    if fixes:
+        pe.update_checksum()
+    return bytes(pe.data)
+
+
 def list_strings(data):
     """[(rva, text, lea refs, abs refs)] for every UTF-8 string in .rdata that the code refers to."""
     pe = PE(data)

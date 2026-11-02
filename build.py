@@ -115,7 +115,7 @@ def main(argv=None):
         manifest = project.load_manifest()
         restoration = project.load_restoration()
         print("Checking inputs" + (" (sizes and entry counts only)" if args.skip_checksums else ""))
-        needed = project.needed_optional_inputs(lang)
+        needed = project.needed_optional_inputs(lang, restoration)
         sets = (("jp-fhd", jp_dir, ()), (lang["target"], target_dir, needed))
         for set_name, folder, _ in sets:
             print(f"  {set_name}: {folder}")

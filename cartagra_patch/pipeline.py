@@ -252,7 +252,8 @@ def run_build(opt, restoration, log=print):
         f"{total['todo']} untranslated) ({os.path.getsize(script_out):,} bytes)")
 
     log(f"[{steps - 1}/{steps}] Interface")
-    interface = (0, 0) if opt.reference else _build_interface(log, opt, work, staging, files_out)
+    interface = (0, 0) if opt.reference else _build_interface(log, opt, work, staging, files_out,
+                                                               restoration["exe_fixes"]["fixes"])
 
     log(f"[{steps}/{steps}] Output")
     _write_info(staging, opt, total, len(scenes), interface)
@@ -290,8 +291,11 @@ def _restore_start_sequence(log, restoration, jp_by, tg_by, scenes):
     log(f"  {mv['from']:12s} start sequence: {mv['movie']} removed")
 
 
-def _build_interface(log, opt, work, staging, files_out):
-    """Translate the executable's interface strings and replace images. Returns (strings translated, images)."""
+def _build_interface(log, opt, work, staging, files_out, exe_fixes=()):
+    """
+    Translate the executable's interface strings, apply the executable fixes (restoration.json
+    "exe_fixes") and replace images. Returns (strings translated, images).
+    """
     lang = opt.language
     try:
         rows = exe_text.load_table(lang["interface_table"])
@@ -300,22 +304,29 @@ def _build_interface(log, opt, work, staging, files_out):
     if rows:
         exe_text.write_table(os.path.join(work, "interface.tsv"), rows)
     translated = 0
-    if any(r["translation"] for r in rows):
+    if any(r["translation"] for r in rows) or exe_fixes:
         exe = os.path.normpath(os.path.join(opt.target_dir, os.pardir, EXE_NAME))
         if not os.path.isfile(exe):
             raise BuildError(f"{exe} not found: copy {EXE_NAME} of the target release into the input set "
-                             f"(next to its files/ folder) to translate the interface")
+                             f"(next to its files/ folder)")
         with open(exe, "rb") as f:
-            original = f.read()
+            data = f.read()
+        if any(r["translation"] for r in rows):
+            try:
+                data, translated, nrefs = exe_text.translate(data, rows)
+            except ValueError as e:
+                raise BuildError(f"{lang['interface_table']} does not fit {exe}:\n  " + str(e).replace("\n", "\n  ")) from None
+            log(f"  {EXE_NAME}: {translated} of {len(rows)} interface strings translated "
+                f"({nrefs} references redirected to section {exe_text.SECTION_NAME.decode()})")
         try:
-            data, translated, nrefs = exe_text.translate(original, rows)
+            data = exe_text.apply_fixes(data, exe_fixes)
         except ValueError as e:
-            raise BuildError(f"{lang['interface_table']} does not fit {exe}:\n  " + str(e).replace("\n", "\n  ")) from None
+            raise BuildError(f"{exe}: {e}") from None
+        for fix in exe_fixes:
+            log(f"  {EXE_NAME}: fix applied: {fix['name']}")
         os.makedirs(staging, exist_ok=True)
         with open(os.path.join(staging, EXE_NAME), "wb") as f:
             f.write(data)
-        log(f"  {EXE_NAME}: {translated} of {len(rows)} interface strings translated "
-            f"({nrefs} references redirected to section {exe_text.SECTION_NAME.decode()})")
     else:
         log(f"  {EXE_NAME}: not changed (" + ("no translations in interface.tsv)" if rows else "no interface.tsv)"))
 
