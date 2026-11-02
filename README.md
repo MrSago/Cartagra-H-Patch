@@ -1,6 +1,6 @@
 # Cartagra Cut Content Restoration Patch
 
-Restores what the Steam release of **Cartagra ~Tsuki kurui no Yamai~ REBIRTH FHD SIZE EDITION** censored: 24 cut or rewritten scenes, 150 CGs, 1,901 voice clips and 51 edited pictures. The uncensored content comes from the Japanese FHD 2023 release. The Russian build also translates the interface that the Russian release left in English.
+Restores what the Steam release of **Cartagra ~Tsuki kurui no Yamai~ REBIRTH FHD SIZE EDITION** censored: 24 cut or rewritten scenes, 150 CGs (also in the CG gallery), 1,901 voice clips and 51 edited pictures. The uncensored content comes from the Japanese FHD 2023 release. The Russian build also translates the interface that the Russian release left in English.
 
 The patch contains no game files: you build it on your own computer from your own copies of the game. What exactly the patch changes, all build options, the test status and the known issues are in [TECHNICAL_NOTES.md](TECHNICAL_NOTES.md#patch-contents-and-usage). The working journal is [MODLOG.md](MODLOG.md).
 
@@ -11,12 +11,12 @@ You need Python 3.8 or newer (no extra packages), about 7 GB of free space, the 
 **1. Copy the game files** into `inputs/` (the build never reads your game folder). Run from the project folder in `cmd.exe`, with your own paths:
 
 ```bat
-robocopy "D:\Games\Cartagra-2023-JP\files" "inputs\jp-fhd\files" SCRIPT.PAK
+robocopy "D:\Games\Cartagra-2023-JP\files" "inputs\jp-fhd\files" SCRIPT.PAK PARAM.PAK
 robocopy "D:\Games\Cartagra-2023-JP\files\image" "inputs\jp-fhd\files\image" /E
 robocopy "D:\Games\Cartagra-2023-JP\files\voice" "inputs\jp-fhd\files\voice" /E
 
 robocopy "D:\Games\Cartagra-2026-RU-Steam" "inputs\ru-steam" CARTAGRA.exe
-robocopy "D:\Games\Cartagra-2026-RU-Steam\files" "inputs\ru-steam\files" SCRIPT.PAK
+robocopy "D:\Games\Cartagra-2026-RU-Steam\files" "inputs\ru-steam\files" SCRIPT.PAK PARAM.PAK
 robocopy "D:\Games\Cartagra-2026-RU-Steam\files\image" "inputs\ru-steam\files\image" /E
 robocopy "D:\Games\Cartagra-2026-RU-Steam\files\voice" "inputs\ru-steam\files\voice" /E
 robocopy "D:\Games\Cartagra-2026-RU-Steam\files\font_win32_1920" "inputs\ru-steam\files\font_win32_1920" /E
@@ -28,8 +28,8 @@ For the English Steam release, use the same commands as for the Russian release 
 
 | Release | Command | What the patch contains | Status |
 | --- | --- | --- | --- |
-| Russian 2026 release by Innocence translations and The Hounds of God (Steam) | `python build.py --language ru` | The restored scenes, CGs, voices and pictures, all translated into Russian; the Russian interface; a crash fix; the Japanese game start | Incomplete: tested in game, but most restored lines not yet checked in game |
-| English Steam release | `python build.py --language en` | The restored scenes, CGs, voices and pictures, with the restored lines in Japanese where the release has no English line; the same crash fix and game start. No translation: the executable keeps (or gets back) its original English text | Untested: never built with the English files |
+| Russian 2026 release by Innocence translations and The Hounds of God (Steam) | `python build.py --language ru` | The restored scenes, CGs, voices and pictures, all translated into Russian; the restored CGs in the CG gallery; the Russian interface; a crash fix; the Japanese game start | Incomplete: tested in game, but most restored lines not yet checked in game |
+| English Steam release | `python build.py --language en` | The restored scenes, CGs, voices and pictures, with the restored lines in Japanese where the release has no English line; the restored CGs in the CG gallery; the same crash fix and game start. No translation: the executable keeps (or gets back) its original English text | Untested: never built with the English files |
 
 The patch is written to `dist/<language>/`. `BUILD_INFO.txt` there lists every file and where it goes.
 

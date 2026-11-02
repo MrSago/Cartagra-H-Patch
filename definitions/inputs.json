@@ -10,6 +10,12 @@
           "entries": 277,
           "sha256": "12c70afa7a5aabf9e02212be553ed64cb0d11a2fc169e20b958283b6c4f33b8e"
         },
+        "PARAM.PAK": {
+          "use": "data",
+          "size": 121184,
+          "entries": 4,
+          "sha256": "2578c0bff67ac77805867dd29959d01505b8a14b1b1cef673e0f56d4fa9b8b93"
+        },
         "image/BGCG.PAK": {
           "use": "index",
           "size": 477325312,
@@ -86,6 +92,12 @@
           "size": 5210545,
           "entries": 274,
           "sha256": "c33dd504c40a120fbfa1a9b76a2cebd6857ab5407446cb4505e50cd4903014ef"
+        },
+        "PARAM.PAK": {
+          "use": "data",
+          "size": 104280,
+          "entries": 7,
+          "sha256": "95ea8e1e31cf279580b9099f44a1a34f2e1942a793e79cc11836d2f010b12ca5"
         },
         "image/BGCG.PAK": {
           "use": "index",
@@ -264,6 +276,9 @@
       "description": "English Steam release of CARTAGRA (app 4290390). Unmodified original files. Not available to the developers yet: checksums unknown, the build is untested.",
       "files": {
         "SCRIPT.PAK": {
+          "use": "data"
+        },
+        "PARAM.PAK": {
           "use": "data"
         },
         "image/BGCG.PAK": {

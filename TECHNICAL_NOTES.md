@@ -31,6 +31,7 @@ Module names refer to `cartagra_patch/<name>.py`. Before the 2026-10-26 refactor
 - [Interface Text and Images](#interface-text-and-images)
 - [EVENTCG.PAK Comparison](#eventcgpak-comparison)
 - [Censored Images](#censored-images)
+- [CG Gallery](#cg-gallery)
 - [Voice, Music and Sound Effects](#voice-music-and-sound-effects)
 - [Sound Crash](#sound-crash)
 - [CZ4 Image Format and Engine](#cz4-image-format-and-engine)
@@ -74,6 +75,7 @@ Moved here from README.md on 2026-11-03. The README keeps the build steps and th
 | Voices | 1,901 voice clips of the restored scenes |
 | Game start | New Game plays the prologue and the opening movie before the first scene, as in the Japanese release; the Rengoku movie goes back before part 2 ([Start Sequence](#start-sequence)) |
 | Crash fix | One byte of `CARTAGRA.exe`: the sound code always uses the game's 48 kHz rate instead of a value that may already be freed ([Sound Crash](#sound-crash)) |
+| CG gallery | Extras > CG gallery lists the restored CGs too: 259 slots on 18 pages instead of 185 on 13, in the release's order ([CG Gallery](#cg-gallery)) |
 | Ending replay | `_scr_label` is written anew, so the endings in Extras > Endings start at their first instruction ([Label table](#label-table)) |
 | Text | Restored lines use the language's tables, then an identical line of the release, otherwise the Japanese text |
 | Interface (`ru` only) | Interface strings of `CARTAGRA.exe` (296 of 297), 28 interface pictures, Cyrillic letters in FONT1, a Cyrillic `№` in FONT0, the scene headings of the save screens ([Interface Text and Images](#interface-text-and-images)) |
@@ -82,16 +84,16 @@ Moved here from README.md on 2026-11-03. The README keeps the build steps and th
 
 | Build | Files | Size |
 | --- | --- | --- |
-| `ru` | `CARTAGRA.exe` (interface + crash fix), `files/SCRIPT.PAK`, `files/image/EVENTCG.PAK`, `OTHCG.PAK`, `SYSCG.PAK`, `resident/PARTS.PAK`, `files/voice/VOICE.PAK`, `files/font_win32_1920/FONT0*.PAK` and `FONT1*.PAK` (12 files) | 1.9 GB |
-| `en` | `CARTAGRA.exe` (the target's original text, no translation, + crash fix), `files/SCRIPT.PAK` (restored scenes, the two picture fixes, start sequence, label table, `_arflag`; no translation), `files/image/EVENTCG.PAK`, `OTHCG.PAK`, `files/voice/VOICE.PAK` | 1.7 GB |
+| `ru` | `CARTAGRA.exe` (interface + crash fix), `files/SCRIPT.PAK`, `files/PARAM.PAK`, `files/image/EVENTCG.PAK`, `OTHCG.PAK`, `SYSCG.PAK`, `SYSCG2.PAK`, `resident/PARTS.PAK`, `files/voice/VOICE.PAK`, `files/font_win32_1920/FONT0*.PAK` and `FONT1*.PAK` (14 files) | 1.9 GB |
+| `en` | `CARTAGRA.exe` (the target's original text, no translation, + crash fix), `files/SCRIPT.PAK` (restored scenes, the two picture fixes, start sequence, label table, `_arflag`; no translation), `files/PARAM.PAK` (CG gallery), `files/image/EVENTCG.PAK`, `OTHCG.PAK`, `SYSCG2.PAK` (gallery previews), `files/voice/VOICE.PAK` | 1.7 GB |
 
 The `en` row comes from a trial build with `--language en --target-files inputs/ru-steam/files` (the English Steam files are not available): it has no interface table, scene titles, pictures or font keys, so it writes only the restoration, the crash fix and the start sequence; 3,970 restored lines stay Japanese (452 reuse lines of the release). **[V]** Its executable has no translation either: `exe_original_text` (in `languages/en/language.json`) removes the Russian translators' `.rtransl` section when the input exe has it ([Strings in CARTAGRA.exe](#strings-in-cartagraexe)). Checked again on 2026-11-03 with the user's `inputs/en-steam/` (Russian archives, the Steam `CARTAGRA_backup.exe`): the output exe has no Cyrillic text and differs from the input only by the crash fix.
 
-Approximate sizes of the replaced files: `CARTAGRA.exe` 7 MB, `SCRIPT.PAK` 6 MB, `EVENTCG.PAK` 569 MB, `OTHCG.PAK` 341 MB, `VOICE.PAK` 807 MB; `ru` also `SYSCG.PAK` 62 MB, `resident/PARTS.PAK` 91 MB (pictures stored uncompressed as CZ0; the original is 22 MB), FONT0 80 MB, FONT1 15 MB.
+Approximate sizes of the replaced files: `CARTAGRA.exe` 7 MB, `SCRIPT.PAK` 6 MB, `EVENTCG.PAK` 569 MB, `OTHCG.PAK` 341 MB, `VOICE.PAK` 807 MB, `PARAM.PAK` 0.1 MB, `SYSCG2.PAK` 23 MB; `ru` also `SYSCG.PAK` 62 MB, `resident/PARTS.PAK` 91 MB (pictures stored uncompressed as CZ0; the original is 22 MB), FONT0 80 MB, FONT1 15 MB.
 
 ### Inputs
 
-The build reads only `inputs/<set>/` (or `--jp-files`, `--target-files`, `--inputs`): `jp-fhd/files/` (Japanese FHD 2023: `SCRIPT.PAK`, `image/*.PAK`, `voice/*.PAK`), `<target>/files/` (`SCRIPT.PAK`, `image/*.PAK`, `voice/*.PAK`; `image/resident/PARTS.PAK` when pictures are replaced; `font_win32_1920/FONT0*`, `FONT1*` when `font_glyphs` or `font_numero` is set) and `<target>/CARTAGRA.exe` (always needed now, for the executable fixes). `definitions/inputs.json` lists every file with size, entry count and SHA-256; the English list is an assumption (copied from `ru-steam`, no checksums). About 4.8 GB for the inputs and 2 GB for the output.
+The build reads only `inputs/<set>/` (or `--jp-files`, `--target-files`, `--inputs`): `jp-fhd/files/` (Japanese FHD 2023: `SCRIPT.PAK`, `PARAM.PAK`, `image/*.PAK`, `voice/*.PAK`), `<target>/files/` (`SCRIPT.PAK`, `PARAM.PAK`, `image/*.PAK`, `voice/*.PAK`; `image/resident/PARTS.PAK` when pictures are replaced; `font_win32_1920/FONT0*`, `FONT1*` when `font_glyphs` or `font_numero` is set) and `<target>/CARTAGRA.exe` (always needed now, for the executable fixes). `definitions/inputs.json` lists every file with size, entry count and SHA-256; the English list is an assumption (copied from `ru-steam`, no checksums). About 4.8 GB for the inputs and 2 GB for the output.
 
 ### Command line
 
@@ -661,6 +663,38 @@ Kinds of censorship found:
 
 **[V]** In game: `f035` in `0207-15-00` (the scene in the user's report) shows uncensored, and the user confirmed the uncensored pictures in game.
 
+## CG Gallery
+
+**[V]** (2026-11-03) Extras > CG gallery is the entry `_cggallery` of `PARAM.PAK` (the JP release: `_cgmode`, same format), read once by `CARTAGRA.exe` at RVA 0x22970 (Steam build). Words are little-endian u16:
+
+| Part | Content |
+| --- | --- |
+| Head | 3 words (0), number of slot lists (1), 1 word (1) |
+| Slot list | count, then one word per slot: an image ID, or 0x10000 − k for picture group k (from 1); then one UTF-16 string per slot (all empty) |
+| Groups | count, then per group: n, n image IDs |
+| Ranges | per image archive: base ID (u32), n, n seen-flag numbers (0xFFFF = none); the reader stops at n = 0 or at the end |
+
+The gallery shows 15 slots per page (the exe divides the slot number by 15 and by 5); the page indicator is drawn with the digits of `SYSCG/graphic_pt`, so the page count follows the slot count. A slot is unlocked when one of its pictures has its seen flag. The engine sets the flag from the image ID through the ranges when a script shows the picture, and with op 120 ("mark CG as seen"): the release's scripts use op 120 only 16 times and show most gallery pictures (for example `e001`) only with the image load instruction. The flags are 1,000 bits (`0x5859F0` in the exe, checked before every use).
+
+| | JP | Steam (`ru-steam`) | Patched |
+| --- | --- | --- | --- |
+| Slots (pages) | 254 (17) | 185 (13) | 259 (18) |
+| Pictures | 473 (EVENTCG 344, OTHCG 129) | 301 (EVENTCG 187, OTHCG 113, BGCG 1) | 484 |
+| Highest seen flag | 523 | 380 | 532 |
+
+The JP release shows 18 pages in game (user's screenshot) for its 254 slots; why is not known (its executable is a different, 32-bit build). The Steam gallery is in story order (EVENTCG and OTHCG mixed), the JP one lists EVENTCG first. Seen-flag numbers differ between the releases, so the save's flags stay valid only with the target's numbers.
+
+`gallery.merge` (build step 1) keeps the target's slots, order and flags and adds the JP pictures, mapped by archive and name to the patched archives (`e047` → `e047_jp` and Steam's `e047`):
+
+- a JP slot that shares a picture with a target slot adds its other pictures to that slot (for example `e001k3`, `eh001k1`–`k4`);
+- a JP slot with only new pictures becomes a new slot after the slot that holds the previous JP slot (74 new slots, mostly the H-scenes);
+- new gallery pictures get the free seen-flag numbers 381–532 in image ID order; the EVENTCG range grows to the 374 entries of the patched archive;
+- left out: `f022b`, `f022j` (JP OTHCG pictures the patch does not add; no restored scene shows them).
+
+**Previews.** `image/SYSCG2.PAK` holds one preview per slot (`CGGALLERY_CH01_001`...; JP `CGMODE_CH01_001`...), and the gallery takes the preview of slot k by image ID: `id_start` (63000) + k. The executable has no name for them. **[V]** In game (2026-11-03, user's screenshots), with only `PARAM.PAK` changed, slot 94 (page 7, slot 4) showed Steam's preview 94 but opened `eh029`, and almost every slot after the first new one was off the same way. `gallery.build_previews` therefore rewrites `SYSCG2.PAK` in the merged slot order: the target's preview of each target slot, the JP preview of each new slot. The two releases crop the previews the same way, but Steam's are 304x169 (visible 301x169, black margin) and JP's 320x170 (visible 306x170). The JP preview's visible part is scaled to 301x169 (`cztool.resize`, linear filter) and stored as CZ0 with a Steam header; the entries are renamed in order. The JP previews of H-scenes have white blobs over parts of the picture, as in the JP release.
+
+**[V]** In game: 18 pages and the previously unlocked CGs (user's screenshot of page 7, with only `PARAM.PAK`). The rebuilt previews are not seen in game yet.
+
 ## Voice, Music and Sound Effects
 
 **[V]** `VOICE.PAK`: 8,179 clip names are common, 1,901 exist only in JP `VOICE0.PAK`, and 4 only in RUS (`nur0006a`, `nur0006b`, `shu5001`, `tyu0008`). Same names have different IDs. The patch appends the 1,901 clips (IDs 8184–10084) and copies their `0x01`/`0x04` section values. Ported MESSAGEs get their voice IDs remapped by name; no ported line references an unmapped clip.
@@ -701,6 +735,7 @@ Repository contents: `pak.py`, `SCRIPT.PAK`, `SCRIPT_FHD/` (`solvev2.py` text ex
 
 1. **EVENTCG**: read `<target>/image/EVENTCG.PAK`, append the JP-only entries (`lucapak.append_missing`: parents remapped by name, xxh64 computed), replace the censored entries in place (`replace_from`) and append the split copy `e047_jp` (`append_copy`). Untouched entries are byte-identical and in their original order (verified).
    **OTHCG**: replace the 16 censored pictures in place.
+   **Gallery**: add the JP gallery's pictures to `_cggallery` in `<target>/PARAM.PAK`, put the previews of `<target>/image/SYSCG2.PAK` in the new slot order (JP previews scaled for the new slots) and write both ([CG Gallery](#cg-gallery)).
 2. **VOICE**: the same for `VOICE.PAK` with `VOICE0.PAK` as donor, copying section values.
 3. **SCRIPT**: build the name maps (images over all target image archives with the new EVENTCG; voices with the new VOICE; variables from `_varname`), the translation memory and the first free select slot. Port the 24 scenes, check every jump target, write the translation tables, retarget the 4 predecessor JUMPs and insert the 4 new scenes before the metadata entries. Then apply the two target script fixes for censored pictures and restore the [start sequence](#start-sequence) (3 scripts). Write `_scr_label` anew ([Label table](#label-table)), translate the scene headings in `_varstr` ([Scene titles](#scene-titles)) and finally recompute `_arflag` for all scripts ([Read Flags and Saves](#read-flags-and-saves)). 242 of the 274 original entries stay byte-identical (2026-11-03).
 4. **Interface**: read `<target>/../CARTAGRA.exe`, restore its original text when the language has `exe_original_text`, translate its strings when `languages/<lang>/interface.tsv` has translations (see [Interface Text and Images](#interface-text-and-images)), apply the executable fixes of `restoration.json` ([Sound Crash](#sound-crash)) and write it; write the table to `build/<lang>/interface.tsv`. Replace the pictures in `languages/<lang>/images/<archive>/` that differ from the exported originals in `languages/<interface_original>/images/` (byte comparison of the PNG files; without an exported original the pixels are compared). Archives already written by step 1 are modified there, others are read from `<target>/image/`; an archive is written only if a picture in it changed.
@@ -721,6 +756,7 @@ Refactored on 2026-10-26 so the project no longer depends on the game installati
 | `cartagra_patch/pipeline.py` | `BuildOptions`, `run_build` (the steps above), `BUILD_INFO.txt` | yes |
 | `cartagra_patch/lucapak.py`, `lucascript.py`, `script_port.py`, `cztool.py` | Format libraries and the porter (moved from the top level; code unchanged except for package imports, a pluggable `xxh64`, the `lucapak` CLI and neutral TSV column names) | yes |
 | `cartagra_patch/exe_text.py` | Interface strings of `CARTAGRA.exe`: PE reader, references, table I/O and checks, adding `.uitext` | yes |
+| `cartagra_patch/gallery.py` | The CG gallery table (`PARAM.PAK` `_cggallery`): reading, writing, adding the JP pictures | yes |
 | `definitions/restoration.json` | What to restore: censored and removed scenes (with predecessors), censored images, split images, target script fixes, the start sequence, the New Game script. Moved out of the code; shared by all languages | yes |
 | `definitions/inputs.json` | Required files per input set, with use (`data` = copied or patched, `index` = only entry names read), size, entry count and SHA-256; `optional` files (`../CARTAGRA.exe`, `image/resident/PARTS.PAK`) are required only by builds that use them | yes |
 | `languages/<lang>/language.json`, `translation/`, `interface.tsv`, `scene_titles.tsv` | Language settings and status; translation tables; interface table; scene headings of the save screens ([languages/README.md](languages/README.md)) | yes |
@@ -798,6 +834,7 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 | Archives | xxHash64 test vectors; byte-identical PAK round trip (also with a name prefix such as `PARTS/`); appending keeps the IDs of existing entries and remaps parent IDs by name; in-place replacement keeps the ID |
 | Scripts | `_arflag` counts (lines incl. op 43, select bit ranges, markers) and record rebuild (stale record fixed, metadata record kept, missing record appended); jump targets relocated after inserting an odd-length instruction; `LZW\0` entry round trip; label table: line rule, instruction alignment (removed instruction maps to the next), rebuild (stale target offset corrected through an inserted instruction, JP labels followed through a port with a dropped op, target-only label placed after the same message, new script gets a line, clear errors when a label cannot be placed); scene headings (`_varstr`): read, round trip, translation of the English slot only (padding of odd-length records kept), unknown table row rejected, table file (duplicate rejected), the `ru` table translates all 58 headings of `inputs/ru-steam` (when present); start sequence: call inserted after the setup instructions, movie block cut (jumps redirected, marker IDs renumbered), calls replaced by the movie (jumps land on it) |
 | Images | CZ4 decode of an image made by a test encoder (2 LZW blocks, delta bands); alpha compositing; CZ0 encode/decode keeps the placement fields; PNG reader (RGBA, RGB, palette with transparency; filters 0-4) and PNG round trip; replacement pictures in a build (archive entry replaced and its hash updated, other entries kept; wrong size and unknown entry rejected); picture export by name and pattern, copies never overwritten, unedited copies skipped (no archive written, no input needed), pixel comparison without exported originals; `images.tsv` matches the Steam archives (when present); fonts: letters copied into a smaller font set (`add_glyphs`: indices, scaled widths, cells drawn), `№` redrawn (`redraw_numero`: other cells unchanged, narrowed N, raised o, bar, width entry; missing glyph rejected) |
+| Gallery | table round trip (groups, ranges, strings); previews in the new order (target preview reused, JP preview scaled into the target's visible size with a black margin, CZ0, renamed, hash); merge: shared picture adds the JP slot's others to the target slot, a new JP slot goes after the slot of its JP predecessor, missing pictures left out, target flags kept and new ones numbered in image ID order, ranges extended, image outside every range rejected; name map with a split picture; both releases' tables read and written back unchanged (when present) |
 | Interface text | synthetic PE: `lea` and relocated-pointer references, translation into `.uitext` (references redirected, originals kept, `SizeOfImage`, second run rejected, empty table = unchanged); table checks (placeholders, duplicate id, wrong original, id outside the file); table round trip; the `ru` and original tables fit `inputs/ru-steam/CARTAGRA.exe` (when present); executable fixes (bytes and checksum changed, second run and RVA outside the sections rejected; the `restoration.json` fixes fit `inputs/ru-steam/CARTAGRA.exe` after the translation, when present); original text: a translation section undone (equal to the original apart from the checksum; no section = unchanged; missing, wrong and foreign entries rejected), `exe_original_text` on `inputs/ru-steam/CARTAGRA.exe` (58 references, no `.rtransl`, no Cyrillic, only the `lea` bytes changed, the crash fix still applies; when present) |
 | Translation tables | write/read round trip with escapes and the five-column header; older formats (`source`/`existing`/`translation`, `ru_existing`/`ru`); missing table |
 | Languages and paths | every language has a valid status and an existing input set; `en` is not `complete`; unknown language rejected; project paths are absolute and independent of the working directory; output names `ru`, `ru-partial`, `ru-test` |
@@ -815,7 +852,7 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 2. **[?]** Saves made inside the 24 changed scenes, the 4 retargeted predecessors or the 3 start-sequence scripts (`0000-op1`, `0209-08-00`, `0308-02-00`) may break after installing or removing the patch (they store positions in scripts whose layout changed). Not tested.
 3. **[H]** New select flag slots (197+) assume the engine's flag array is large enough. The JP build uses slots up to 229 (plus its options), and the in-game choice test worked.
 4. Save thumbnails for restored scenes are not set (JP op 130 dropped); `EVENTCG_SAVE.PAK` is unused.
-5. **[?]** The Extras CG gallery and scene replay probably do not list restored content (JP op 129 dropped; gallery data not studied).
+5. The Extras CG gallery lists the restored CGs since 2026-11-03 (18 pages seen in game; the rebuilt previews not yet). Their pictures unlock only when their scenes are played with the new gallery installed: playing them before did not set their seen flags. JP `f022b` and `f022j` are not in the gallery (the patch does not add them to `OTHCG.PAK`; no restored scene shows them). The scene replay (Extras > SCENEgallery) is not studied (JP op 129 dropped).
 6. `0210-10-00` and `0215-03-00` show the Japanese date eyecatch instead of the English one the RUS build uses.
 7. Steam-only Russian lines inside censored scenes are dropped with the Steam rewrite.
 8. Restored pictures: the JP 4368×2457 pan image `e007k0` is not used (the RUS script shows the static uncensored `e007` instead), and Steam's own frame `e007k0` is no longer shown.
@@ -831,7 +868,7 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 ## Open Questions
 
 - Do saves inside changed scripts survive? (Test: save in a ported scene, reload.)
-- How does the Extras gallery decide which CGs to show, and can restored CGs be added?
+- How does the scene replay (Extras > SCENEgallery) choose its scenes, and can the restored scenes be added?
 - What exactly are JP op 129 and the RUS MESSAGE tail value?
 - Where did `CARTAGRA_backup.exe` come from? (`CARTAGRA.exe` is the Russian release's executable with its `.rtransl` section.)
 
@@ -839,7 +876,7 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 
 1. Check the added Russian lines in game; proofread them (see [Text for the Russian slot](#text-for-the-russian-slot)).
 2. Play through the remaining 21 restored scenes; test saves and loads.
-3. Investigate the gallery and replay data so restored CGs and scenes are listed.
+3. Check the restored CGs in the gallery in game; investigate the scene replay so restored scenes are listed.
 4. Translate the text inside restored CG images and the manual pages (`MANUAL`, `MANUAL_DECK`); the other interface pictures are translated (`tools/image_text.py`).
 5. Get the English Steam files, record their checksums in `definitions/inputs.json`, build `en` and test it.
 6. An installer with version checks and rollback.

@@ -30,6 +30,7 @@ import struct
 from . import cztool
 from . import exe_text
 from . import fonts
+from . import gallery
 from . import lucascript as ls
 from . import script_port as sp
 from .images import changed_images, language_images, reference_png
@@ -136,8 +137,11 @@ def run_build(opt, restoration, log=print):
                              os.path.join(jp, "image", "EVENTCG.PAK"), eventcg_out,
                              replace=censored["EVENTCG"],
                              split={n: new for (a, n), new in split_images.items() if a == "EVENTCG"})
+    othcg_out = os.path.join(files_out, "image", "OTHCG.PAK")
     _patch_archive(log, "OTHCG.PAK", os.path.join(tg, "image", "OTHCG.PAK"), os.path.join(jp, "image", "OTHCG.PAK"),
-                   os.path.join(files_out, "image", "OTHCG.PAK"), replace=censored["OTHCG"], append=False)
+                   othcg_out, replace=censored["OTHCG"], append=False)
+    if not opt.reference:
+        _build_gallery(log, jp, tg, files_out, {"EVENTCG.PAK": eventcg_out, "OTHCG.PAK": othcg_out}, split_images)
 
     voice_index_path = os.path.join(tg, "voice", "VOICE.PAK")
     if opt.voice:
@@ -274,6 +278,39 @@ def run_build(opt, restoration, log=print):
     os.makedirs(DIST_DIR, exist_ok=True)
     os.replace(staging, dist)
     return dist
+
+
+def _build_gallery(log, jp, tg, files_out, patched, aliases):
+    """
+    Add the JP release's gallery pictures to the target's CG gallery (PARAM.PAK) and put the previews
+    (image/SYSCG2.PAK) in the new slot order (see gallery.py).
+    """
+    param = LucaPak.read(os.path.join(tg, "PARAM.PAK"))
+    jp_param = LucaPak.read(os.path.join(jp, "PARAM.PAK"))
+    entry = next((e for e in param.entries if e.name == gallery.ENTRY), None)
+    jp_entry = next((e for e in jp_param.entries if e.name == gallery.JP_ENTRY), None)
+    if entry is None or jp_entry is None:
+        raise BuildError(f"PARAM.PAK: no {gallery.ENTRY} in the target or no {gallery.JP_ENTRY} in the JP release")
+    out_images = archive_index(tg, "image", patched)
+    try:
+        target = gallery.Gallery.parse(entry.data)
+        merged, added, origins, left_out = gallery.merge(
+            target, gallery.Gallery.parse(jp_entry.data),
+            gallery.image_map(archive_index(jp, "image"), out_images, aliases),
+            [(start, len(names)) for _, start, names in out_images])
+    except ValueError as e:
+        raise BuildError(f"PARAM.PAK {gallery.ENTRY}: {e}") from None
+    set_entry(entry, merged.build())
+    param.write(os.path.join(files_out, "PARAM.PAK"))
+    previews = gallery.build_previews(LucaPak.read(os.path.join(tg, "image", "SYSCG2.PAK")),
+                                      LucaPak.read(os.path.join(jp, "image", "SYSCG2.PAK")), origins)
+    previews.write(os.path.join(files_out, "image", "SYSCG2.PAK"))
+    new_slots = sum(1 for source, _ in origins if source == "jp")
+    jp_names = {start + i: n for _, start, names in archive_index(jp, "image") for i, n in enumerate(names)}
+    log(f"  PARAM.PAK: CG gallery {len(target.slots)} -> {len(merged.slots)} slots ({gallery.pages(target)} -> "
+        f"{gallery.pages(merged)} pages), {added} pictures added in {new_slots} new slots and existing ones"
+        + (f"; not in the patched archives: {', '.join(jp_names.get(i, str(i)) for i in left_out)}" if left_out else ""))
+    log(f"  SYSCG2.PAK: {len(origins)} gallery previews, {new_slots} of them from the JP release")
 
 
 def _restore_start_sequence(log, restoration, jp_by, tg_by, scenes):

@@ -252,6 +252,36 @@ def composite(base_rgba, base_w, over_rgba, over_w, over_h, x, y):
     return bytes(out)
 
 
+def _weights(src, dst):
+    """Per output pixel [(source pixel, weight)] of a linear (triangle) filter, widened when shrinking."""
+    scale = src / dst
+    support = max(scale, 1.0)
+    out = []
+    for i in range(dst):
+        centre = (i + 0.5) * scale
+        lo, hi = max(int(centre - support), 0), min(int(centre + support) + 1, src)
+        taps = [(j, max(0.0, 1 - abs(j + 0.5 - centre) / support)) for j in range(lo, hi)]
+        total = sum(w for _, w in taps)
+        out.append([(j, w / total) for j, w in taps if w])
+    return out
+
+
+def resize(rgba, w, h, new_w, new_h):
+    """Resample an RGBA image (bytes, w x h) to new_w x new_h; channels are filtered independently."""
+    wx, wy = _weights(w, new_w), _weights(h, new_h)
+    rows = []
+    for y in range(h):
+        row = rgba[4 * w * y : 4 * w * (y + 1)]
+        rows.append([[sum(row[4 * j + c] * k for j, k in taps) for c in range(4)] for taps in wx])
+    out = bytearray(4 * new_w * new_h)
+    for y, taps in enumerate(wy):
+        for x in range(new_w):
+            o = 4 * (y * new_w + x)
+            for c in range(4):
+                out[o + c] = min(255, max(0, round(sum(rows[j][x][c] * k for j, k in taps))))
+    return bytes(out)
+
+
 def write_png(path, rgba, w, h):
     raw = b"".join(b"\x00" + rgba[y * 4 * w : (y + 1) * 4 * w] for y in range(h))
 

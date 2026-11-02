@@ -21,6 +21,7 @@ sys.path.insert(0, ROOT)
 
 from cartagra_patch import cztool  # noqa: E402
 from cartagra_patch import exe_text  # noqa: E402
+from cartagra_patch import gallery  # noqa: E402
 from cartagra_patch import lucascript as ls  # noqa: E402
 from cartagra_patch import project  # noqa: E402
 from cartagra_patch import script_port as sp  # noqa: E402
@@ -805,6 +806,96 @@ class ExeTextTests(unittest.TestCase):
         self.assertEqual(exe_text.check_table(pe, ru, refs), [])
 
 
+def gallery_table(slots, ranges):
+    words = [0, 0, 0, 1, 1, len(slots)]
+    groups = [s for s in slots if len(s) > 1]
+    k = 0
+    for s in slots:
+        if len(s) > 1:
+            k += 1
+        words.append(s[0] if len(s) == 1 else 0x10000 - k)
+    words += [0] * len(slots) + [len(groups)]
+    for g in groups:
+        words += [len(g)] + g
+    data = struct.pack(f"<{len(words)}H", *words)
+    for base, flags in ranges:
+        data += struct.pack(f"<IH{len(flags)}H", base, len(flags), *flags)
+    return data
+
+
+class GalleryTests(unittest.TestCase):
+    def test_round_trip(self):
+        data = gallery_table([[101], [102, 103], [104]], [[1, [7, 0xFFFF]], [101, [0, 1, 2, 3]]])
+        g = gallery.Gallery.parse(data)
+        self.assertEqual(g.slots, [[101], [102, 103], [104]])
+        self.assertEqual(g.seen_flag(103), 2)
+        self.assertEqual(g.seen_flag(2), 0xFFFF)
+        self.assertEqual(g.build(), data)
+        with self.assertRaisesRegex(ValueError, "group 2"):
+            bad = bytearray(gallery_table([[101], [102, 103]], []))
+            bad[14:16] = struct.pack("<H", 0xFFFE)  # the second slot refers to group 2 of 1
+            gallery.Gallery.parse(bytes(bad))
+
+    def test_merge(self):
+        target = gallery.Gallery.parse(gallery_table([[101], [102], [103, 104]], [[101, [0, 1, 2, 4]]]))
+        # JP: 201 = 101, 203 = 103; 202, 205, 206 and 207 are new pictures (output 105..108); 209 is missing
+        jp = gallery.Gallery.parse(gallery_table([[205], [201], [202, 209], [203, 206], [207]], []))
+        jp_to_out = {201: [101], 202: [105], 203: [103], 205: [106], 206: [107], 207: [108], 209: []}
+        g, added, origins, left_out = gallery.merge(target, jp, jp_to_out, [(101, 8)])
+        self.assertEqual(g.slots, [[106], [101], [105], [102], [103, 104, 107], [108]])
+        self.assertEqual((added, left_out), (4, [209]))
+        self.assertEqual(origins, [("jp", 0), ("target", 0), ("jp", 2), ("target", 1), ("target", 2), ("jp", 4)])
+        self.assertEqual(g.strings, [""] * 6)
+        # the target's flags stay; new pictures get the free numbers in ID order
+        self.assertEqual(g.ranges, [[101, [0, 1, 2, 4, 3, 5, 6, 7]]])
+        self.assertEqual(gallery.Gallery.parse(g.build()).slots, g.slots)
+        with self.assertRaisesRegex(ValueError, "in no range"):
+            gallery.merge(target, jp, jp_to_out, [])
+
+    def test_previews(self):
+        def preview(w, h, vw, vh, rgb):
+            head = bytearray(28)
+            head[0:4] = b"CZ0\x00"
+            struct.pack_into("<IHHH", head, 4, 28, w, h, 32)
+            struct.pack_into("<HH", head, 0x18, vw, vh)
+            return bytes(head) + bytes(rgb + (255,)) * (w * h)
+
+        target, jp = LucaPak(), LucaPak()
+        target.section_types = [(3, 1), (SEC_HASH, 8)]
+        target.entries = [Entry(f"CGGALLERY_CH01_{i:03d}", preview(8, 4, 6, 3, (i, i, i)), b"", {3: b"\x00"})
+                          for i in (1, 2)]
+        jp.entries = [Entry("CGMODE_CH01_001", preview(10, 6, 9, 5, (200, 100, 50)), b"", {3: b"\x00"})]
+        gallery.build_previews(target, jp, [("target", 1), ("jp", 0), ("target", 0)])
+        self.assertEqual([e.name for e in target.entries], ["CGGALLERY_CH01_001", "CGGALLERY_CH01_002", "CGGALLERY_CH01_003"])
+        self.assertEqual(target.entries[0].data[28:31], bytes((2, 2, 2)))
+        hd, rgba = cztool.decode(target.entries[1].data)
+        self.assertEqual((hd["magic"], hd["width"], hd["height"], hd["canvas"]), (b"CZ0\x00", 8, 4, (6, 3)))
+        self.assertEqual(rgba[:4], bytes((200, 100, 50, 255)))  # the visible part, scaled
+        self.assertEqual(rgba[4 * 6 : 4 * 8], b"\x00\x00\x00\xff" * 2)  # black margin
+        self.assertEqual(rgba[4 * 8 * 3 :], b"\x00\x00\x00\xff" * 8)
+        self.assertEqual(target.entries[1].sections[SEC_HASH], xxh64_pure(target.entries[1].data))
+        self.assertEqual(cztool.resize(bytes(range(16)), 2, 2, 2, 2), bytes(range(16)))
+
+    def test_image_map(self):
+        jp = [("EVENTCG", 1001, ["e1", "e2", "e3"])]
+        out = [("EVENTCG", 1001, ["e1", "e3", "e2", "e2_jp"])]
+        self.assertEqual(gallery.image_map(jp, out, {("EVENTCG", "e2"): "e2_jp"}),
+                         {1001: [1001], 1002: [1004, 1003], 1003: [1002]})
+        self.assertEqual(gallery.image_map(jp, [("EVENTCG", 1001, ["e1"])]), {1001: [1001], 1002: [], 1003: []})
+
+    def test_real_tables(self):
+        """The tables of both releases are read and written back unchanged; the merge gives 18 pages."""
+        paths = {s: os.path.join(project.INPUTS_DIR, s, "files", "PARAM.PAK") for s in ("jp-fhd", "ru-steam")}
+        if not all(os.path.isfile(p) for p in paths.values()):
+            self.skipTest("inputs/*/files/PARAM.PAK is not present")
+        jp = next(e.data for e in LucaPak.read(paths["jp-fhd"]).entries if e.name == gallery.JP_ENTRY)
+        tg = next(e.data for e in LucaPak.read(paths["ru-steam"]).entries if e.name == gallery.ENTRY)
+        for data, slots, pictures in ((jp, 254, 473), (tg, 185, 301)):
+            g = gallery.Gallery.parse(data)
+            self.assertEqual((len(g.slots), len(g.pictures())), (slots, pictures))
+            self.assertEqual(g.build(), data)
+
+
 class TsvTests(unittest.TestCase):
     def test_roundtrip_and_legacy_columns(self):
         rows = [dict(row=0, kind="msg", voice="12", jp="a\tb", translation="x\ny", source="tsv"),
@@ -994,8 +1085,13 @@ class IntegrationTests(unittest.TestCase):
         # and the small fonts with the added letters
         if lang.get("font_glyphs"):
             pictures |= {f for f in fonts.input_files() if os.path.basename(f).startswith(fonts.TARGET)}
+        # and the large fonts with the redrawn №
+        if lang.get("font_numero"):
+            pictures |= {f for f in fonts.input_files() if os.path.basename(f).startswith(fonts.SOURCE)}
         self.assertLessEqual(pictures, set(files[1]))
-        self.assertEqual({k: v for k, v in files[1].items() if k != "SCRIPT.PAK" and k not in pictures},
+        # the CG gallery (PARAM.PAK) and its previews (SYSCG2.PAK) are new since the reference build
+        self.assertLessEqual({"PARAM.PAK", "image/SYSCG2.PAK"}, set(files[1]))
+        self.assertEqual({k: v for k, v in files[1].items() if k not in ("SCRIPT.PAK", "PARAM.PAK", "image/SYSCG2.PAK") and k not in pictures},
                          {k: v for k, v in REFERENCE_RU.items() if k != "SCRIPT.PAK" and k not in pictures})
         for set_name, folder in dirs.items():
             self.assertEqual(project.check_inputs(set_name, folder, manifest, log=quiet), [])
