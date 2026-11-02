@@ -658,3 +658,79 @@ def rebuild_scr_label(tg_label, tg_scripts, jp_label, jp_scripts, entries, porte
         raise ValueError("scripts must come before the metadata entries")
     tail = ls.lzw_unpack(tg_label).split(b"\r\n")[len(tg_scripts) + 1:]
     return ls.lzw_pack(b"\r\n".join(lines + tail)), total, moved
+
+
+# ---------------------------------------------------------------- scene titles
+# "_varstr" has one op-29 record per string variable a script sets when it starts: the
+# script name, a u16 variable ID and the text in each language slot (Japanese, English,
+# Chinese). The save and load screens show it as the scene heading ("Chapter 1", "Feb. 10")
+# and every save keeps a copy of it. The Russian release left the English slot in English
+# (TECHNICAL_NOTES.md, "Scene titles").
+
+VARSTR_SLOT = 1  # the target's text slot (English; read by the Russian release)
+TITLE_COLUMNS = ("original", "translation")
+
+
+def _varstr_fields(ins):
+    _, p = ls.read_str(ins.body, 0)
+    p += 2
+    head, texts = ins.body[:p], []
+    while p < len(ins.body):
+        text, p = _utf16(ins.body, p)
+        texts.append(text)
+    return head, texts
+
+
+def read_varstr(data):
+    """[(script name, variable ID, [text per language slot])]."""
+    out = []
+    for ins in ls.parse(data):
+        head, texts = _varstr_fields(ins)
+        name, p = ls.read_str(head, 0)
+        out.append((name.decode("utf-8"), struct.unpack_from("<H", head, p)[0], texts))
+    return out
+
+
+def load_titles(path):
+    """{original: translation} for the rows with a translation; {} when the file does not exist."""
+    out = {}
+    if not os.path.exists(path):
+        return out
+    with open(path, encoding="utf-8") as f:
+        header = f.readline().rstrip("\n").split("\t")
+        missing = [c for c in TITLE_COLUMNS if c not in header]
+        if missing:
+            raise ValueError(f"{path}: missing columns {', '.join(missing)}")
+        col = {name: i for i, name in enumerate(header)}
+        for n, line in enumerate(f, 2):
+            if not line.strip():
+                continue
+            cells = line.rstrip("\n").split("\t") + [""] * len(header)
+            original, text = (tsv_unescape(cells[col[c]]) for c in TITLE_COLUMNS)
+            if original in out:
+                raise ValueError(f"{path}:{n}: {original!r} appears twice")
+            if text:
+                out[original] = text
+    return out
+
+
+def translate_varstr(data, titles):
+    """
+    Return (new _varstr data, number of texts replaced, [target texts without a translation]):
+    the target slot's texts replaced by titles[text]. Raises ValueError for titles not in the data.
+    """
+    instrs = ls.parse(data)
+    seen, replaced = set(), 0
+    for ins in instrs:
+        head, texts = _varstr_fields(ins)
+        if len(texts) <= VARSTR_SLOT or not texts[VARSTR_SLOT]:
+            continue
+        seen.add(texts[VARSTR_SLOT])
+        if texts[VARSTR_SLOT] in titles:
+            texts[VARSTR_SLOT] = titles[texts[VARSTR_SLOT]]
+            ins.body = head + b"".join(_w16(t) for t in texts)
+            replaced += 1
+    unknown = sorted(set(titles) - seen)
+    if unknown:
+        raise ValueError(f"not in the target's _varstr: {', '.join(map(repr, unknown))}")
+    return b"".join(ins.encode() for ins in instrs), replaced, sorted(seen - set(titles))

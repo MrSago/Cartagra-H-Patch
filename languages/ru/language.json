@@ -7,5 +7,6 @@
   "status_note": "Restoration is built and tested in game. All restored lines are translated, but the 3,970 lines added on 2026-10-26 have not been checked in game yet.",
   "placeholder": "Untranslated lines show the Japanese original (speaker names translated when known).",
   "interface_original": "_original_steam/en",
-  "font_glyphs": "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя"
+  "font_glyphs": "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя",
+  "font_numero": true
 }

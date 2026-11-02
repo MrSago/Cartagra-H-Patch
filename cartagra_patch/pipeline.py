@@ -7,6 +7,7 @@ Inputs (read only):
               its CARTAGRA.exe is read from the folder above
   languages/<lang>/translation/*.tsv  translations of restored lines (optional)
   languages/<lang>/interface.tsv      translation of the executable's interface strings (optional)
+  languages/<lang>/scene_titles.tsv   translation of the scene headings of the save screens (optional)
   languages/<lang>/images/<archive>/<entry>.png  replacement pictures (optional; copies identical to
                                                  the exported originals are skipped)
   definitions/restoration.json        what to restore (shared by all languages)
@@ -236,6 +237,14 @@ def run_build(opt, restoration, log=print):
             raise BuildError(f"_scr_label: {e}")
         set_entry(tg_by["_scr_label"], data)
         log(f"  _scr_label: {labels} labels; {moved} offsets of the target build corrected")
+        try:
+            data, n, untranslated = sp.translate_varstr(tg_by["_varstr"].data, sp.load_titles(lang["scene_titles"]))
+        except ValueError as e:
+            raise BuildError(f"{lang['scene_titles']}: {e}")
+        if n:
+            set_entry(tg_by["_varstr"], data)
+            log(f"  _varstr: {n} scene headings translated"
+                + (f"; untranslated: {', '.join(untranslated)}" if untranslated else ""))
 
     if opt.test_start:
         start = restoration["new_game_script"]
@@ -370,6 +379,11 @@ def _build_interface(log, opt, work, staging, files_out, exe_fixes=()):
             fonts.add_glyphs(opt.target_dir, files_out, lang["font_glyphs"], log=log)
         except (OSError, ValueError) as e:
             raise BuildError(f"font_glyphs: {e}") from None
+    if lang.get("font_numero"):
+        try:
+            fonts.redraw_numero(opt.target_dir, files_out, log=log)
+        except (OSError, ValueError) as e:
+            raise BuildError(f"font_numero: {e}") from None
     return translated, images
 
 

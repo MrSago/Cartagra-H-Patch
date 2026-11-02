@@ -61,6 +61,7 @@ def load_language(code):
         raise BuildError(f"languages/{code}/language.json: status must be one of {', '.join(STATUSES)}")
     cfg["translation_dir"] = os.path.join(LANGUAGES_DIR, code, "translation")
     cfg["interface_table"] = os.path.join(LANGUAGES_DIR, code, "interface.tsv")
+    cfg["scene_titles"] = os.path.join(LANGUAGES_DIR, code, "scene_titles.tsv")
     cfg["images_dir"] = os.path.join(LANGUAGES_DIR, code, "images")
     # originals of the target release's interface (interface.tsv, images.tsv, images/), e.g. "_original_steam/en"
     original = cfg.get("interface_original")
@@ -88,7 +89,7 @@ def needed_optional_inputs(lang, restoration=None):
 
     exe_fixes = restoration and restoration["exe_fixes"]["fixes"]
     needed = ["../CARTAGRA.exe"] if exe_fixes or interface_translated(lang) else []
-    needed += input_files() if lang.get("font_glyphs") else []
+    needed += input_files() if lang.get("font_glyphs") or lang.get("font_numero") else []
     return needed + [f"image/{arch}.PAK" for arch in changed_images(lang)]
 
 

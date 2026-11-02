@@ -131,7 +131,7 @@ Intermediate files go to `build/ru/`. `dist/ru/` is replaced only when a build s
 
 The build does not install anything. Install by hand:
 
-1. Back up the original files from your game folder (`CARTAGRA.exe`, and in `files/`: `SCRIPT.PAK`, `image/EVENTCG.PAK`, `image/OTHCG.PAK`, `voice/VOICE.PAK`) and your saves. Keep the backups somewhere safe. The input copies in `inputs/` also work as a backup.
+1. Back up the original files from your game folder that the patch replaces (`CARTAGRA.exe` and the files under `files/`: `BUILD_INFO.txt` lists them) and your saves. Keep the backups somewhere safe. The input copies in `inputs/` also work as a backup.
 2. Copy the contents of `dist/ru/` into the game folder and replace the files: `CARTAGRA.exe` goes next to the game's `CARTAGRA.exe`, and `files/` into the game's `files/` folder. `BUILD_INFO.txt` lists the destination of each file.
 3. Start the game.
 
@@ -179,7 +179,7 @@ The build never changes the tables in `languages/`. It writes a copy of every ta
 
 ### Interface text
 
-The interface text (options, confirmation dialogs, the save screen's months, music and ending titles, the start-up notice) is stored in `CARTAGRA.exe`. The Russian release left it in English. Its translation is in `languages/<lang>/interface.tsv` (UTF-8, tab-separated):
+The interface text (options, confirmation dialogs, the save screen's months and slot number, music and ending titles, the start-up notice) is stored in `CARTAGRA.exe`. The Russian release left it in English. Its translation is in `languages/<lang>/interface.tsv` (UTF-8, tab-separated):
 
 | Column | Meaning |
 | --- | --- |
@@ -195,9 +195,12 @@ Limits of the game's fonts (found in game):
 
 - The interface font has no `«` and `»` (they show as blanks); use `❝` and `❞` (shown as “ ”), as the English text does.
 - Some labels are drawn with the small font set `FONT1` (sizes 35 to 72), which has Latin letters only: the bottom bar (`Defaults`, `Close` and the like on the options, save and load screens), the slider labels, the version number and the save date. Russian text there showed as blanks. The build copies the Russian letters into `FONT1` from the large font set, scaled (`font_glyphs` in `language.json`, see [languages/README.md](languages/README.md)), so these strings are translated too.
+- The large font set `FONT0` draws `№` the Japanese way, as `No.` (seen in game on the slot number of the save and load screens). With `font_numero` in `language.json` the build redraws it as a Cyrillic `№` from the font's own `N` and `o`, in every size and face, and writes `files/font_win32_1920/FONT0__INFO.PAK` and `FONT0_*.PAK` (about 80 MB).
 - `BGM`, `SE` and `MOVIE` are not in the table: the same strings are names of script commands in the executable, so they stay English (the BGM volume label shows "BGM").
 
 The build copies the table to `build/<lang>/interface.tsv`. To translate the interface into another language, copy [languages/_original_steam/en/interface.tsv](languages/_original_steam/en/interface.tsv) (English only) to `languages/<code>/interface.tsv` and fill in the `translation` column.
+
+The heading above the text preview on the save and load screens (`Feb. 10`, `Chapter 1`) is not in the executable but in `SCRIPT.PAK`. Its translation is in `languages/<lang>/scene_titles.tsv` (columns `original` and `translation`; 31 texts). The build stops if an `original` is not in the release.
 
 The table fits only the `CARTAGRA.exe` of the Russian release (its checksum is in `definitions/inputs.json`). `python -m cartagra_patch.exe_text check <exe> <table>` checks a table against an executable, and `python -m cartagra_patch.exe_text list <exe>` lists every string the code refers to (to find strings for another version).
 
@@ -258,7 +261,7 @@ When you report a problem, give the scene name if you know it (for example `0208
 - Chosen options are shown in another color only if **Options > Text1 > "Color of Previously Read Text"** is set to "Only Choices" (chosen options only, as in the Japanese release) or "On" (all read text). With "Off" the game still remembers your choices but doesn't mark them.
 - `BGM` stays English (see [Interface text](#interface-text)). The labels drawn with the small font (bottom bar, slider labels, version, save date) use letters copied into that font by the build (checked in game on 2026-11-02). The right-hand bottom label is "Назад" rather than "Закрыть": the box keeps the English width and longer words run off the screen. Character names on the Voice page come from `PARAM.PAK` and are not translated.
 - The manual pages and the key names are still in English. The other interface pictures are translated by `tools/image_text.py` (see [Interface pictures](#interface-pictures)). The title menu buttons are cut to the width of the English words, so the Russian words there are smaller (about 0.6 of the English size on the title screen, set by ЗАГРУЗКА and by the room needed to space the words evenly; letters are squeezed by at most 10%). The save and load headings must leave room for the slot number, so SAVE is ЗАПИСЬ and ЗАГРУЗКА is smaller than LOAD was.
-- The short scene date on the save and load screens (`Feb. 15`) is still English: it comes from a table in the scripts, not from a picture.
+- The scene heading on the save and load screens (the date such as «10 февраля», or «Глава 1») is stored in each save when you save: saves made before installing the patch keep the English heading (`Feb. 10`) until you overwrite them.
 - The English build has never been made or tested.
 - There is no installer.
 

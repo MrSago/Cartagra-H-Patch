@@ -6,7 +6,8 @@ Japanese set; the Russian release added Cyrillic to it) and FONT1 (sizes 35, 37,
 and kana only). Some interface labels use FONT1: the bottom bar of the options, save and load screens
 (Defaults, Close, ...), the slider labels and the save date. Russian text there is drawn as blanks.
 `add_glyphs` copies the letters a language needs from FONT0's largest size into every FONT1 size and
-face, scaled to that size.
+face, scaled to that size. `redraw_numero` replaces FONT0's numero sign, which has the Japanese
+shape ("No."), with the Cyrillic one (the save and load screens show the slot number with it).
 
 Files (one set per font group n):
   FONTn__INFO.PAK   "info<size>" for every size, shared by all faces:
@@ -181,3 +182,82 @@ def add_glyphs(files_dir, out_dir, chars, log=print):
     log(f"  {FONT_DIR}/{TARGET}: {added} letters added to {len(infos)} sizes x {len(FACES)} faces "
         f"(scaled from {SOURCE} size {src_size})")
     return added
+
+
+def _ink(px, cell):
+    """(x0, x1, y0, y1) of the visible pixels of a cell."""
+    xs = [x for x in range(cell) if any(px[y * cell + x] > 40 for y in range(cell))]
+    ys = [y for y in range(cell) if any(px[y * cell + x] > 40 for x in range(cell))]
+    return xs[0], xs[-1], ys[0], ys[-1]
+
+
+def compose_numero(n_px, o_px, size):
+    """
+    A Cyrillic-style numero sign from a font's N and o cells (grey levels, (size + 1)² floats):
+    N (narrowed when needed), a raised o of half the cap height and a bar under it.
+    Returns (cell pixels, advance width).
+    """
+    cell = size + 1
+    nx0, nx1, ny0, ny1 = _ink(n_px, cell)
+    _, _, oy0, oy1 = _ink(o_px, cell)
+    cap = ny1 - ny0 + 1
+    small = resample(o_px, cell, cell, 0.5 * cap / (oy1 - oy0 + 1))
+    sx0, sx1, sy0, sy1 = _ink(small, cell)
+    gap = max(1, round(size * 0.05))
+    k = min(1.0, (cell - 2 - gap - (sx1 - sx0 + 1)) / (nx1 + 1))
+    out = []
+    wts = _weights(cell, cell, k)
+    for y in range(cell):
+        line = n_px[y * cell : (y + 1) * cell]
+        out += [min(255.0, max(0.0, sum(line[j] * w for j, w in wt))) for wt in wts]
+    dx, dy = round((nx1 + 1) * k) + gap - sx0, ny0 - sy0
+    for y in range(sy0, sy1 + 1):
+        for x in range(sx0, sx1 + 1):
+            p = (y + dy) * cell + x + dx
+            out[p] = max(out[p], small[y * cell + x])
+    bar = ny0 + sy1 - sy0 + 1 + max(1, round(cap * 0.1))
+    for y in range(bar, bar + max(1, round(cap * 0.07))):
+        for x in range(sx0 + dx, sx1 + dx + 1):
+            out[y * cell + x] = 255.0
+    return out, min(cell, sx1 + dx + 1 + max(1, round(size * 0.06)))
+
+
+def redraw_numero(files_dir, out_dir, log=print):
+    """
+    Replace FONT0's numero sign (drawn the Japanese way, as "No.") with a Cyrillic-style one
+    (compose_numero) in every size and face, writing FONT0__INFO.PAK and FONT0_<face>.PAK to
+    out_dir/font_win32_1920/.
+    """
+    src_dir, dst_dir = os.path.join(files_dir, FONT_DIR), os.path.join(out_dir, FONT_DIR)
+    info_pak = LucaPak.read(os.path.join(src_dir, f"{SOURCE}__INFO.PAK"))
+    infos = {e: FontInfo(e.data) for e in info_pak.entries}
+    sizes = {inf.size: (e, inf) for e, inf in infos.items()}
+    numero = ord("№")
+    if any(not inf.glyph[numero] for inf in infos.values()):
+        raise ValueError(f"{SOURCE} has no glyph for '№'")
+    advance = {}
+    os.makedirs(dst_dir, exist_ok=True)
+    for face in FACES:
+        pak = LucaPak.read(os.path.join(src_dir, f"{SOURCE}_{face}.PAK"))
+        for (pfx, size), entry in _sheets(pak).items():
+            e, inf = sizes[size]
+            hd, pal, idx = cztool.decode_cz2(entry.data)
+            w, cell = hd["width"], size + 1
+            alpha = [pal[4 * i + 3] for i in range(256)]
+            to_index = [min(range(256), key=lambda i: (abs(alpha[i] - a), i)) for a in range(256)]
+            glyph = lambda ch: [float(alpha[i]) for i in _cell(idx, w, cell, inf.glyph[ord(ch)])]
+            px, adv = compose_numero(glyph("N"), glyph("o"), size)
+            advance[e] = max(advance.get(e, 0), adv)
+            out = bytearray(idx)
+            i = inf.glyph[numero]
+            x0, y0 = (i % 100) * cell, (i // 100) * cell
+            for y in range(cell):
+                out[(y0 + y) * w + x0 : (y0 + y) * w + x0 + cell] = bytes(to_index[round(v)] for v in px[y * cell : (y + 1) * cell])
+            _set(entry, cztool.encode_cz2(entry.data, pal, w, hd["height"], bytes(out)))
+        pak.write(os.path.join(dst_dir, f"{SOURCE}_{face}.PAK"))
+    for e, inf in infos.items():
+        inf.cells[inf.glyph[numero]] = (0, advance[e], inf.cells[inf.glyph[ord("N")]][2])
+        inf.width[numero] = advance[e] << 8
+        _set(e, inf.build())
+    info_pak.write(os.path.join(dst_dir, f"{SOURCE}__INFO.PAK"))
+    log(f"  {FONT_DIR}/{SOURCE}: '№' redrawn in {len(infos)} sizes x {len(FACES)} faces")

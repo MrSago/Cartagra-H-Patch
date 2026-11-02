@@ -373,6 +373,48 @@ class LabelTableTests(unittest.TestCase):
                                  [Entry("s1", s1_out), Entry("p1", build_script([op(26), op(55, b"\0\0", 3)]))], {"p1"})
 
 
+def varstr_record(name, var, texts):
+    return ls.Instr(29, 1, 0, ls.make_str(name) + struct.pack("<H", var) + b"".join(sp._w16(t) for t in texts)).encode()
+
+
+class SceneTitleTests(unittest.TestCase):
+    def test_read_and_translate_varstr(self):
+        data = (varstr_record(b"0206-01-00", 201, ["第一幕", "Chapter 1", "第一幕"])
+                + varstr_record(b"0000-op1", 202, ["二月六日", "Feb. 6", "二月六日"])  # odd length: padded
+                + varstr_record(b"0210-12-00", 201, ["", "", ""]))
+        self.assertEqual(sp.read_varstr(data), [("0206-01-00", 201, ["第一幕", "Chapter 1", "第一幕"]),
+                                                ("0000-op1", 202, ["二月六日", "Feb. 6", "二月六日"]),
+                                                ("0210-12-00", 201, ["", "", ""])])
+        self.assertEqual(sp.translate_varstr(data, {}), (data, 0, ["Chapter 1", "Feb. 6"]))
+        out, n, untranslated = sp.translate_varstr(data, {"Feb. 6": "6 февраля"})
+        self.assertEqual((n, untranslated), (1, ["Chapter 1"]))
+        self.assertEqual([t for _, _, t in sp.read_varstr(out)][1], ["二月六日", "6 февраля", "二月六日"])
+        with self.assertRaisesRegex(ValueError, "'Feb. 7'"):
+            sp.translate_varstr(data, {"Feb. 7": "7 февраля"})
+
+    def test_load_titles(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "t.tsv")
+            self.assertEqual(sp.load_titles(path), {})
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("original\ttranslation\nFeb. 6\t6 февраля\nChapter 1\t\n")
+            self.assertEqual(sp.load_titles(path), {"Feb. 6": "6 февраля"})
+            with open(path, "a", encoding="utf-8") as f:
+                f.write("Feb. 6\tx\n")
+            with self.assertRaisesRegex(ValueError, "twice"):
+                sp.load_titles(path)
+
+    def test_language_titles_fit_the_target(self):
+        """languages/ru/scene_titles.tsv translates every heading of the Russian release, when it is present."""
+        path = os.path.join(project.INPUTS_DIR, "ru-steam", "files", "SCRIPT.PAK")
+        if not os.path.isfile(path):
+            self.skipTest("inputs/ru-steam/files/SCRIPT.PAK is not present")
+        data = next(e.data for e in LucaPak.read(path).entries if e.name == "_varstr")
+        self.assertEqual(sp.translate_varstr(data, {})[0], data)  # round trip
+        _, n, untranslated = sp.translate_varstr(data, sp.load_titles(project.load_language("ru")["scene_titles"]))
+        self.assertEqual((n, untranslated), (58, []))
+
+
 class CzToolTests(unittest.TestCase):
     def test_cz4_decode(self):
         rnd = random.Random(1)
@@ -441,6 +483,33 @@ class FontTests(unittest.TestCase):
             self.assertEqual(fonts.add_glyphs(os.path.join(tmp, "in"), os.path.join(tmp, "out2"), "A", log=quiet), 0)
             with self.assertRaises(ValueError):
                 fonts.add_glyphs(os.path.join(tmp, "in"), out, "Ы", log=quiet)
+
+    def test_redraw_numero(self):
+        from cartagra_patch import fonts
+        from cartagra_patch.lucapak import LucaPak as Pak
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "in", fonts.FONT_DIR)
+            make_font_set(src, "FONT0", 44, {"N": (0, 30), "o": (0, 20), "№": (0, 44)})  # boxes in rows 2..41
+            out = os.path.join(tmp, "out")
+            fonts.redraw_numero(os.path.join(tmp, "in"), out, log=quiet)
+            info = fonts.FontInfo(Pak.read(os.path.join(out, fonts.FONT_DIR, "FONT0__INFO.PAK")).entries[0].data)
+            adv = info.width[ord("№")] >> 8
+            self.assertEqual(info.glyph[ord("№")], 3)
+            self.assertEqual(info.cells[3], (0, adv, 44 // 9))
+            self.assertTrue(30 < adv <= 45)
+            orig = cztool.decode_cz2(Pak.read(os.path.join(src, "FONT0_MINCHO.PAK")).entries[0].data)[2]
+            for face in fonts.FACES:
+                hd, _, idx = cztool.decode_cz2(Pak.read(os.path.join(out, fonts.FONT_DIR, f"FONT0_{face}.PAK")).entries[0].data)
+                w, x0 = hd["width"], 3 * 45
+                at = lambda x, y: idx[y * w + x0 + x]
+                self.assertEqual([idx[y * w : y * w + x0] for y in range(46)], [orig[y * w : y * w + x0] for y in range(46)])
+                self.assertTrue(at(5, 20) > 200)                        # N, narrowed
+                self.assertTrue(at(adv - 6, 5) > 200)                   # raised o: half the cap height
+                self.assertTrue(at(adv - 6, 24) < 50 and at(adv - 6, 33) < 50)
+                self.assertTrue(at(adv - 6, 27) > 200)                  # the bar under it
+            make_font_set(src, "FONT0", 44, {"N": (0, 30), "o": (0, 20)})
+            with self.assertRaisesRegex(ValueError, "no glyph"):
+                fonts.redraw_numero(os.path.join(tmp, "in"), out, log=quiet)
 
 
 class CzReplacementTests(unittest.TestCase):

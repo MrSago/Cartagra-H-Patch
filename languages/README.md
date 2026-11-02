@@ -7,6 +7,7 @@ languages/<code>/
   language.json        settings (see below)
   translation/*.tsv    translations of restored lines, one table per restored scene (optional)
   interface.tsv        translation of the interface text in CARTAGRA.exe (optional)
+  scene_titles.tsv     translation of the scene headings of the save and load screens (optional)
   images/<archive>/<entry>.png   interface pictures to translate (optional; not in git)
   images_text.json     the texts in the interface pictures and their translations, for tools/image_text.py (optional)
 _original_jp/          the scene tables with the Japanese release's text (see _original_jp/README.md)
@@ -26,6 +27,7 @@ _original_steam/en/    the Steam release's English interface (see _original_stea
 | `placeholder` | What untranslated lines show |
 | `interface_original` | Optional. Folder below `languages/` with the originals of the target release's interface (`_original_steam/en`): `build.py --export-images` writes the pictures there, and the build replaces only pictures that differ from them |
 | `font_glyphs` | Optional. Letters to copy from the game's large fonts (FONT0) into its small interface fonts (FONT1), which have Latin letters only; needed when translated labels drawn with FONT1 (bottom bar, slider labels, save date) use other letters. The build then writes `files/font_win32_1920/FONT1__INFO.PAK` and `FONT1_*.PAK` |
+| `font_numero` | Optional (`true`). Redraw the large fonts' `№`, which has the Japanese shape (`No.`), as the Cyrillic sign; the save and load screens show the slot number with it when the interface table translates `No.%d` as `№%d`. The build then writes `files/font_win32_1920/FONT0__INFO.PAK` and `FONT0_*.PAK` |
 
 The table formats are described in the main README: [scene tables](../README.md#translating-the-restored-scenes), [interface table and pictures](../README.md#translating-the-interface). The build reads the files here and writes copies of the tables in the current format to `build/<code>/`; it never writes into this folder.
 
