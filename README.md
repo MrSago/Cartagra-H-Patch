@@ -26,10 +26,10 @@ For the English Steam release, use the same commands as for the Russian release 
 
 **2. Build:**
 
-| Release | Command | What the patch contains | Status |
-| --- | --- | --- | --- |
-| Russian 2026 release by Innocence translations and The Hounds of God (Steam) | `python build.py --language ru` | The restored scenes, CGs, voices and pictures, all translated into Russian; the restored CGs in the CG gallery; the Russian interface; a crash fix; the Japanese game start | Incomplete: tested in game, but most restored lines not yet checked in game |
-| English Steam release | `python build.py --language en` | The restored scenes, CGs, voices and pictures, with the restored lines in Japanese where the release has no English line; the restored CGs in the CG gallery; the same crash fix and game start. No translation: the executable keeps (or gets back) its original English text | Untested: never built with the English files |
+| Release                                                                      | Command                         | What the patch contains                                                                                                                                                                                                                                                        | Status                                                                      |
+| ---------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| Russian 2026 release by Innocence translations and The Hounds of God (Steam) | `python build.py --language ru` | The restored scenes, CGs, voices and pictures, all translated into Russian; the restored CGs in the CG gallery; the Russian interface; a crash fix; the Japanese game start                                                                                                    | Incomplete: tested in game, but most restored lines not yet checked in game |
+| English Steam release                                                        | `python build.py --language en` | The restored scenes, CGs, voices and pictures, with the restored lines in Japanese where the release has no English line; the restored CGs in the CG gallery; the same crash fix and game start. No translation: the executable keeps (or gets back) its original English text | Untested: never built with the English files                                |
 
 The patch is written to `dist/<language>/`. `BUILD_INFO.txt` there lists every file and where it goes.
 
@@ -39,17 +39,17 @@ The patch is written to `dist/<language>/`. `BUILD_INFO.txt` there lists every f
 
 Everything translatable is in `languages/<language>/`. [languages/README.md](languages/README.md) describes every file and its columns.
 
-| File | What it translates |
-| --- | --- |
-| `translation/<scene>.tsv` | The lines of the 24 restored scenes (the hentai scenes), one table per scene |
-| `interface.tsv` | The interface text in `CARTAGRA.exe` (menus, options, dialogs, music and ending titles) |
-| `scene_titles.tsv` | The scene headings on the save and load screens (`Feb. 10` → «10 февраля») |
-| `images/`, `images_text.json` | The interface pictures with English text |
-| `language.json` | The language's settings, for example the letters to add to the game's fonts |
+| File                          | What it translates                                                                      |
+| ----------------------------- | --------------------------------------------------------------------------------------- |
+| `translation/<scene>.tsv`     | The lines of the 24 restored scenes (the hentai scenes), one table per scene            |
+| `interface.tsv`               | The interface text in `CARTAGRA.exe` (menus, options, dialogs, music and ending titles) |
+| `scene_titles.tsv`            | The scene headings on the save and load screens (`Feb. 10` → «10 февраля»)              |
+| `images/`, `images_text.json` | The interface pictures with English text                                                |
+| `language.json`               | The language's settings, for example the letters to add to the game's fonts             |
 
 **To translate the restored scenes:**
 
-1. Start from the Japanese tables in [languages/_original_jp/](languages/_original_jp/README.md), or from the tables a build writes to `build/<language>/translation/`. Put them in `languages/<language>/translation/`.
+1. Start from the Japanese tables in [languages/\_original_jp/](languages/_original_jp/README.md), or from the tables a build writes to `build/<language>/translation/`. Put them in `languages/<language>/translation/`.
 2. Fill in the `translation` column. Leave `jp` unchanged. Keep the markup: `@Name@` sets the speaker, `$d` separates choices, `\n` is a line break.
 3. Build again. Rows left empty show the same line from the release if it has one, otherwise the Japanese text.
 

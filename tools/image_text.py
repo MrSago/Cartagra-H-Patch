@@ -81,13 +81,20 @@ from PIL import Image, ImageDraw, ImageFont
 from scipy import ndimage
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SS = 4                                   # supersampling of the letter masks
-BINS = np.arange(-30, 60.01, 0.25)       # signed distance to the letter edge, px (negative inside)
-SYSTEM_FONTS = [os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts"),
-                "/usr/share/fonts", "/Library/Fonts", os.path.expanduser("~/.fonts")]
+SS = 4  # supersampling of the letter masks
+BINS = np.arange(
+    -30, 60.01, 0.25
+)  # signed distance to the letter edge, px (negative inside)
+SYSTEM_FONTS = [
+    os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts"),
+    "/usr/share/fonts",
+    "/Library/Fonts",
+    os.path.expanduser("~/.fonts"),
+]
 
 
 # ---------------------------------------------------------------- text masks
+
 
 class Fonts:
     def __init__(self, spec, dirs):
@@ -99,7 +106,9 @@ class Fonts:
             for root, _, files in os.walk(d):
                 if file in files:
                     return os.path.join(root, file)
-        raise SystemExit(f"font {file} not found in {', '.join(self.dirs)} (use --fonts)")
+        raise SystemExit(
+            f"font {file} not found in {', '.join(self.dirs)} (use --fonts)"
+        )
 
     def get(self, name, px):
         key = (name, round(px * 4))
@@ -123,7 +132,13 @@ def text_mask(fonts, font, text, size, sx, tracking=0.0):
     draw = ImageDraw.Draw(im)
     if tracking:
         for i, ch in enumerate(text):
-            draw.text((pad - l + f.getlength(text[:i]) + i * tracking * SS, pad - t), ch, font=f, fill=255, anchor="ls")
+            draw.text(
+                (pad - l + f.getlength(text[:i]) + i * tracking * SS, pad - t),
+                ch,
+                font=f,
+                fill=255,
+                anchor="ls",
+            )
     else:
         draw.text((pad - l, pad - t), text, font=f, fill=255, anchor="ls")
     ox, oy = pad - l, pad - t
@@ -146,21 +161,24 @@ def place(cov, origin, H, W, x, y):
     h, w = cov.shape
     y0, y1, x0, x1 = max(0, oy), min(H * SS, oy + h), max(0, ox), min(W * SS, ox + w)
     if y0 < y1 and x0 < x1:
-        can[y0:y1, x0:x1] = cov[y0 - oy:y1 - oy, x0 - ox:x1 - ox]
+        can[y0:y1, x0:x1] = cov[y0 - oy : y1 - oy, x0 - ox : x1 - ox]
     return can
 
 
 def down(a):
     h, w = a.shape[0] // SS, a.shape[1] // SS
-    return a[:h * SS, :w * SS].reshape(h, SS, w, SS, *a.shape[2:]).mean((1, 3))
+    return a[: h * SS, : w * SS].reshape(h, SS, w, SS, *a.shape[2:]).mean((1, 3))
 
 
 def signed_distance(can):
     inside = can > 0.5
-    return (ndimage.distance_transform_edt(~inside) - ndimage.distance_transform_edt(inside)) / SS
+    return (
+        ndimage.distance_transform_edt(~inside) - ndimage.distance_transform_edt(inside)
+    ) / SS
 
 
 # ---------------------------------------------------------------- fitting and effect
+
 
 def letter_feature(img, polarity):
     lum = img[..., :3] @ np.array([0.299, 0.587, 0.114])
@@ -175,7 +193,12 @@ def fit(fonts, it, img):
     if not sub.any():
         raise ValueError(f"{it['where']}: no letters found (check polarity/thr/box)")
     ys, xs = np.nonzero(sub)
-    gx0, gy0, gx1, gy1 = xs.min() + x0, ys.min() + y0, xs.max() + 1 + x0, ys.max() + 1 + y0
+    gx0, gy0, gx1, gy1 = (
+        xs.min() + x0,
+        ys.min() + y0,
+        xs.max() + 1 + x0,
+        ys.max() + 1 + y0,
+    )
     font = it["font"]
     by_width = it.get("fit") == "width"
     if "size" in it:
@@ -183,7 +206,11 @@ def fit(fonts, it, img):
     else:
         cov, _ = text_mask(fonts, font, it["en"], 100, 1.0)
         bx0, by0, bx1, by1 = ink_box(cov)
-        size = 100 * ((gx1 - gx0) / (bx1 - bx0) if by_width else (gy1 - gy0) / (by1 - by0)) * SS
+        size = (
+            100
+            * ((gx1 - gx0) / (bx1 - bx0) if by_width else (gy1 - gy0) / (by1 - by0))
+            * SS
+        )
         size *= it.get("size_scale", 1.0)
     cov, org = text_mask(fonts, font, it["en"], size, 1.0)
     bx0, by0, bx1, by1 = ink_box(cov)
@@ -220,8 +247,10 @@ def original_letters(it, img, thr=None):
     up = np.asarray(Image.fromarray(feat, "F").resize((W * SS, H * SS), Image.BILINEAR))
     keep = np.zeros_like(up, bool)
     x0, y0, x1, y1 = it["fit_box"]
-    keep[y0 * SS:y1 * SS, x0 * SS:x1 * SS] = True
-    return ((up > (it.get("thr", 0.5) if thr is None else thr)) & keep).astype(np.float32)
+    keep[y0 * SS : y1 * SS, x0 * SS : x1 * SS] = True
+    return ((up > (it.get("thr", 0.5) if thr is None else thr)) & keep).astype(
+        np.float32
+    )
 
 
 def background(it, img, sd_en):
@@ -229,6 +258,7 @@ def background(it, img, sd_en):
     if it.get("bg", "clear") == "clear":
         return np.zeros_like(img)
     import cv2
+
     mask = (sd_en < it.get("radius", 8)).astype(np.uint8)
     pm = img.copy()
     pm[..., :3] *= pm[..., 3:4]
@@ -259,17 +289,17 @@ def learn(img, bg, sd):
         sel = idx == i
         o, b = O[sel], B[sel]
         n = len(o)
-        if n < 8:       # too few pixels to say; the neighbouring bins decide
+        if n < 8:  # too few pixels to say; the neighbouring bins decide
             continue
         # unknowns c_r, c_g, c_b, a:  o_k - b_k = c_k - a b_k ;  o_a - b_a = a (1 - b_a)
         A = np.zeros((4 * n, 4))
         rhs = np.zeros(4 * n)
         for k in range(3):
-            A[k * n:(k + 1) * n, k] = 1
-            A[k * n:(k + 1) * n, 3] = -b[:, k]
-            rhs[k * n:(k + 1) * n] = o[:, k] - b[:, k]
-        A[3 * n:, 3] = 1 - b[:, 3]
-        rhs[3 * n:] = o[:, 3] - b[:, 3]
+            A[k * n : (k + 1) * n, k] = 1
+            A[k * n : (k + 1) * n, 3] = -b[:, k]
+            rhs[k * n : (k + 1) * n] = o[:, k] - b[:, k]
+        A[3 * n :, 3] = 1 - b[:, 3]
+        rhs[3 * n :] = o[:, 3] - b[:, 3]
         reg = 1e-3 * n
         x = np.linalg.solve(A.T @ A + reg * np.eye(4), A.T @ rhs)
         # over a black background the alpha is free; it must still cover the colour (premultiplied)
@@ -316,6 +346,7 @@ def learn_rows(img, bg, sd):
 def learn_texture(img, sd):
     """Fill of the letters at every pixel: the inside of the original letters spread over the box."""
     import cv2
+
     pm = img.copy()
     pm[..., :3] *= pm[..., 3:4]
     inside = sd < -0.75
@@ -335,17 +366,22 @@ def apply(layer, can, shift=0.0, fill=None):
     if fill is not None:
         # inside the letters the measured fill (per row or per pixel), blended in over the edge band
         t = np.clip(-sd - 0.5, 0, 1)[..., None]
-        f = np.repeat(fill, SS, 0)[:pm.shape[0]]
-        f = f[:, None, :] if f.ndim == 2 else np.repeat(f, SS, 1)[:, :pm.shape[1]]
+        f = np.repeat(fill, SS, 0)[: pm.shape[0]]
+        f = f[:, None, :] if f.ndim == 2 else np.repeat(f, SS, 1)[:, : pm.shape[1]]
         pm = pm * (1 - t) + f * t
     return down(pm)
 
 
 # ---------------------------------------------------------------- items
 
+
 def expand(entry):
     """Items of a picture entry with the defaults filled in."""
-    defaults = {k: v for k, v in entry.items() if k not in ("image", "items", "grid", "words", "copy_to", "by")}
+    defaults = {
+        k: v
+        for k, v in entry.items()
+        if k not in ("image", "items", "grid", "words", "copy_to", "by")
+    }
     items = []
     for it in entry.get("items", []):
         items.append({**defaults, **it})
@@ -363,7 +399,14 @@ def expand(entry):
                 bx1 = bx0 + over.pop("box_w", bx1 - bx0)
                 by1 = by0 + over.pop("box_h", by1 - by0)
                 cx, cy = cx["at"], cy["at"]
-                items.append({**defaults, **over, **word, "box": [cx + bx0, cy + by0, cx + bx1, cy + by1]})
+                items.append(
+                    {
+                        **defaults,
+                        **over,
+                        **word,
+                        "box": [cx + bx0, cy + by0, cx + bx1, cy + by1],
+                    }
+                )
     for it in items:
         it["where"] = f"{entry['image']} {it['en']!r} {it['box']}"
     return items
@@ -376,7 +419,11 @@ def render_item(fonts, it, out, orig, report):
         k = -it["rotate"] // 90
         sub = np.ascontiguousarray(np.rot90(orig[y0:y1, x0:x1], k))
         res = sub.copy()
-        flat = {key: v for key, v in it.items() if key not in ("rotate", "fit_box", "fit_from")}
+        flat = {
+            key: v
+            for key, v in it.items()
+            if key not in ("rotate", "fit_box", "fit_from")
+        }
         inner = {**flat, "box": [0, 0, sub.shape[1], sub.shape[0]]}
         render_item(fonts, inner, res, sub, report)
         out[y0:y1, x0:x1] = np.rot90(res, -k)
@@ -386,9 +433,11 @@ def render_item(fonts, it, out, orig, report):
     img = orig[y0:y1, x0:x1].astype(np.float64)
     H, W = img.shape[:2]
     fb = it.get("fit_box")
-    it["fit_box"] = [fb[0] - x0, fb[1] - y0, fb[2] - x0, fb[3] - y0] if fb else [0, 0, W, H]
+    it["fit_box"] = (
+        [fb[0] - x0, fb[1] - y0, fb[2] - x0, fb[3] - y0] if fb else [0, 0, W, H]
+    )
     fdx, fdy = it.get("fit_from", (0, 0))
-    fimg = orig[y0 + fdy:y1 + fdy, x0 + fdx:x1 + fdx]
+    fimg = orig[y0 + fdy : y1 + fdy, x0 + fdx : x1 + fdx]
     size, sx, tracking, x, y = fit(fonts, it, fimg)
     cov_en, org_en = text_mask(fonts, it["font"], it["en"], size, sx, tracking)
     can_en = place(cov_en, org_en, H, W, x, y)
@@ -410,8 +459,11 @@ def render_item(fonts, it, out, orig, report):
         # only what was erased can belong to the effect; differences further out are the filled-in
         # background, not glow
         layer[BINS > it.get("radius", 8)] = 0
-    fill = {"rows": lambda: learn_rows(img, bg, sd_orig), "texture": lambda: learn_texture(img, sd_orig),
-            None: lambda: None}[it.get("fill")]()
+    fill = {
+        "rows": lambda: learn_rows(img, bg, sd_orig),
+        "texture": lambda: learn_texture(img, sd_orig),
+        None: lambda: None,
+    }[it.get("fill")]()
     margin = reach(layer)
 
     def composite(can, scale=1.0):
@@ -447,14 +499,19 @@ def render_item(fonts, it, out, orig, report):
     rtrk = tight if it.get("start_tight") else trk_ru
     gaps = max(1, len(it["ru"]) - 1)
     while True:
-        cov, org = text_mask(fonts, it["font"], it["ru"], rsize, rsx, rtrk * rsize / size_ru)
+        cov, org = text_mask(
+            fonts, it["font"], it["ru"], rsize, rsx, rtrk * rsize / size_ru
+        )
         rx0, _, rx1, _ = ink_box(cov)
         w = (rx1 - rx0) / SS
         if w <= room + 0.01:
             break
         if rtrk > tight + 1e-6:
             # first closer letters, then narrower ones, then smaller ones
-            rtrk = max(tight, rtrk - (w - room) / gaps / max(rsx, 1e-6) * size_ru / rsize - 0.01)
+            rtrk = max(
+                tight,
+                rtrk - (w - room) / gaps / max(rsx, 1e-6) * size_ru / rsize - 0.01,
+            )
         elif rsx > sx_ru * it.get("min_sx", 0.85) + 1e-6:
             rsx = max(sx_ru * it.get("min_sx", 0.85), rsx * room / w)
         else:
@@ -471,7 +528,9 @@ def render_item(fonts, it, out, orig, report):
     can_ru = place(cov, org, H, W, rx, ry)
     out[y0:y1, x0:x1] = composite(can_ru, rsize / size)
     it["_shift"] = shift
-    report.append((it, img, composite(can_en), out[y0:y1, x0:x1].copy(), size, sx, rsize, rsx))
+    report.append(
+        (it, img, composite(can_en), out[y0:y1, x0:x1].copy(), size, sx, rsize, rsx)
+    )
 
 
 def to_u8(a):
@@ -484,13 +543,13 @@ def compare_sheet(report, path):
     for it, orig, en, ru, *_ in report:
         h, w = orig.shape[:2]
         row = np.zeros((h, 3 * w + 8, 4))
-        row[:, :w], row[:, w + 4:2 * w + 4], row[:, 2 * w + 8:] = orig, en, ru
+        row[:, :w], row[:, w + 4 : 2 * w + 4], row[:, 2 * w + 8 :] = orig, en, ru
         rows.append(row)
     W = max(r.shape[1] for r in rows)
     can = np.zeros((sum(r.shape[0] + 2 for r in rows), W, 4))
     y = 0
     for r in rows:
-        can[y:y + r.shape[0], :r.shape[1]] = r
+        can[y : y + r.shape[0], : r.shape[1]] = r
         y += r.shape[0] + 2
     im = Image.fromarray(to_u8(can), "RGBA")
     bg = Image.new("RGBA", im.size, (90, 90, 110, 255))
@@ -505,9 +564,13 @@ def menu_positions(items, menu):
     buttons up, `gap` apart and centred on a `width`-wide screen. Returns {(group, en): ink left in the box}.
     """
     from scipy.optimize import linprog
+
     out = {}
     for group, order in menu["rows"].items():
-        mine = [[it for it in items if it.get("group") == group and it["en"] == en] for en in order]
+        mine = [
+            [it for it in items if it.get("group") == group and it["en"] == en]
+            for en in order
+        ]
         if not all(mine):
             missing = [en for en, m in zip(order, mine) if not m]
             raise SystemExit(f"menu: no item {missing} in group {group!r}")
@@ -516,7 +579,9 @@ def menu_positions(items, menu):
         lo = [max(it["_lim"][0] for it in m) for m in mine]
         hi = [min(it["_lim"][1] for it in m) - wk for m, wk in zip(mine, w)]
         # a word that was sized to fill its button exactly has no choice (rounding may leave lo > hi)
-        lo, hi = [min(a, (a + c) / 2) for a, c in zip(lo, hi)], [max(c, (a + c) / 2) for a, c in zip(lo, hi)]
+        lo, hi = [min(a, (a + c) / 2) for a, c in zip(lo, hi)], [
+            max(c, (a + c) / 2) for a, c in zip(lo, hi)
+        ]
         n = len(order)
         x = (menu.get("width", 1920) - sum(cut) - menu.get("gap", 26) * (n - 1)) / 2
         cells = []
@@ -524,21 +589,41 @@ def menu_positions(items, menu):
             cells.append(x)
             x += c + menu.get("gap", 26)
         # variables: ink left of each word on the screen, smallest gap, largest gap, margin to the limits
-        bounds = [(cells[k] + lo[k], cells[k] + hi[k]) for k in range(n)] + [(None, None)] * 2 + [(0, None)]
+        bounds = (
+            [(cells[k] + lo[k], cells[k] + hi[k]) for k in range(n)]
+            + [(None, None)] * 2
+            + [(0, None)]
+        )
         A, b = [], []
         for k in range(n - 1):
-            row = np.zeros(n + 3); row[k + 1], row[k], row[n + 1] = 1, -1, -1; A.append(row); b.append(w[k])
-            row = np.zeros(n + 3); row[k + 1], row[k], row[n] = -1, 1, 1; A.append(row); b.append(-w[k])
+            row = np.zeros(n + 3)
+            row[k + 1], row[k], row[n + 1] = 1, -1, -1
+            A.append(row)
+            b.append(w[k])
+            row = np.zeros(n + 3)
+            row[k + 1], row[k], row[n] = -1, 1, 1
+            A.append(row)
+            b.append(-w[k])
         for k in range(n):
-            row = np.zeros(n + 3); row[k], row[n + 2] = -1, 1; A.append(row); b.append(-(cells[k] + lo[k]))
-            row = np.zeros(n + 3); row[k], row[n + 2] = 1, 1; A.append(row); b.append(cells[k] + hi[k])
-        spread = np.zeros(n + 3); spread[n], spread[n + 1] = -1, 1
+            row = np.zeros(n + 3)
+            row[k], row[n + 2] = -1, 1
+            A.append(row)
+            b.append(-(cells[k] + lo[k]))
+            row = np.zeros(n + 3)
+            row[k], row[n + 2] = 1, 1
+            A.append(row)
+            b.append(cells[k] + hi[k])
+        spread = np.zeros(n + 3)
+        spread[n], spread[n + 1] = -1, 1
         first = linprog(spread, A_ub=A, b_ub=b, bounds=bounds)
         if not first.success:
             raise SystemExit(f"menu {group!r}: the words do not fit their buttons")
         # among the most even layouts, the one with the most room to the button edges
-        roomy = np.zeros(n + 3); roomy[n + 2] = -1
-        second = linprog(roomy, A_ub=A + [spread], b_ub=b + [first.fun + 0.25], bounds=bounds)
+        roomy = np.zeros(n + 3)
+        roomy[n + 2] = -1
+        second = linprog(
+            roomy, A_ub=A + [spread], b_ub=b + [first.fun + 0.25], bounds=bounds
+        )
         p = (second if second.success else first).x
         for k, en in enumerate(order):
             out[(group, en)] = float(p[k] - cells[k])
@@ -548,19 +633,31 @@ def menu_positions(items, menu):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("-l", "--language", required=True)
-    ap.add_argument("--only", nargs="+", metavar="PICTURE", help="render only these pictures")
-    ap.add_argument("--fonts", nargs="+", default=[], metavar="DIR", help="folders with the fonts")
-    ap.add_argument("--compare", metavar="DIR", help="also write comparison sheets to DIR")
+    ap.add_argument(
+        "--only", nargs="+", metavar="PICTURE", help="render only these pictures"
+    )
+    ap.add_argument(
+        "--fonts", nargs="+", default=[], metavar="DIR", help="folders with the fonts"
+    )
+    ap.add_argument(
+        "--compare", metavar="DIR", help="also write comparison sheets to DIR"
+    )
     args = ap.parse_args(argv)
 
     lang_dir = os.path.join(ROOT, "languages", args.language)
     spec = json.load(open(os.path.join(lang_dir, "images_text.json"), encoding="utf-8"))
     cfg = json.load(open(os.path.join(lang_dir, "language.json"), encoding="utf-8"))
-    src_dir = os.path.join(ROOT, "languages", *cfg["interface_original"].split("/"), "images")
+    src_dir = os.path.join(
+        ROOT, "languages", *cfg["interface_original"].split("/"), "images"
+    )
     out_dir = os.path.join(lang_dir, "images")
-    fonts = Fonts(spec["fonts"], [os.path.abspath(d) for d in args.fonts] + SYSTEM_FONTS)
+    fonts = Fonts(
+        spec["fonts"], [os.path.abspath(d) for d in args.fonts] + SYSTEM_FONTS
+    )
     if args.compare:
         os.makedirs(args.compare, exist_ok=True)
 
@@ -573,7 +670,9 @@ def main(argv=None):
                 continue
             src = os.path.join(src_dir, *name.split("/")) + ".png"
             if not os.path.isfile(src):
-                raise SystemExit(f"{src} not found: run build.py --language {args.language} --export-images first")
+                raise SystemExit(
+                    f"{src} not found: run build.py --language {args.language} --export-images first"
+                )
             orig = np.asarray(Image.open(src).convert("RGBA"), np.float64) / 255
             merged = {**entry, **copy, "copy_to": []}
             out, report = orig.copy(), []
@@ -590,9 +689,14 @@ def main(argv=None):
                 # texts' fits (a tail like that of Q makes a single text look larger), the scale at most max_sx
                 for g in {it.get("group") for it in items}:
                     mine = [it for it in items if it.get("group") == g]
-                    fixed[g] = (float(np.median([it["_size"] for it in mine])),
-                                min(float(np.median([it["_sx"] for it in mine])), entry.get("max_sx", 1e9)),
-                                float(np.median([it["_y"] for it in mine])))
+                    fixed[g] = (
+                        float(np.median([it["_size"] for it in mine])),
+                        min(
+                            float(np.median([it["_sx"] for it in mine])),
+                            entry.get("max_sx", 1e9),
+                        ),
+                        float(np.median([it["_y"] for it in mine])),
+                    )
                 for it in items:
                     size_g, sx_g, _ = fixed[it.get("group")]
                     it["_fit"] *= it["_size"] * it["_sx"] / (size_g * sx_g)
@@ -602,7 +706,9 @@ def main(argv=None):
                 scale[g] = min(scale.get(g, 1.0), it["_fit"] / it.get("min_sx", 0.85))
             for it in items:
                 key = (it.get("group"), it["ru"])
-                squeeze[key] = min(squeeze.get(key, 1.0), it["_fit"] / scale[it.get("group")])
+                squeeze[key] = min(
+                    squeeze.get(key, 1.0), it["_fit"] / scale[it.get("group")]
+                )
             for g, factor in entry.get("menu", {}).get("scale", {}).items():
                 # smaller words (each squeezed as before) leave room to even out the gaps of a menu
                 scale[g] *= factor
@@ -616,24 +722,56 @@ def main(argv=None):
                 p.append(weight)
                 for it in expand(merged):
                     key = (it.get("group"), it["ru"])
-                    extra = dict(zip(("ru_size", "ru_sx", "ru_y"), fixed[key[0]])) if fixed else {}
-                    render_item(fonts, {**it, **extra, "start_scale": scale[key[0]], "start_sx": squeeze[key],
-                                        "start_tight": squeeze[key] < 1,
-                                        "force_shift": float(np.median(weight[it["box"][0]]))}, p[3], orig, p[4])
+                    extra = (
+                        dict(zip(("ru_size", "ru_sx", "ru_y"), fixed[key[0]]))
+                        if fixed
+                        else {}
+                    )
+                    render_item(
+                        fonts,
+                        {
+                            **it,
+                            **extra,
+                            "start_scale": scale[key[0]],
+                            "start_sx": squeeze[key],
+                            "start_tight": squeeze[key] < 1,
+                            "force_shift": float(np.median(weight[it["box"][0]])),
+                        },
+                        p[3],
+                        orig,
+                        p[4],
+                    )
             if entry.get("menu"):
                 # once more, with every word placed for even gaps between the buttons
-                where = menu_positions([r[0] for p in pictures for r in p[4]], entry["menu"])
+                where = menu_positions(
+                    [r[0] for p in pictures for r in p[4]], entry["menu"]
+                )
                 for p in pictures:
                     name, merged, orig, weight = p[0], p[1], p[2], p[5]
                     p[3], p[4] = orig.copy(), []
                     for it in expand(merged):
                         key = (it.get("group"), it["ru"])
-                        extra = dict(zip(("ru_size", "ru_sx", "ru_y"), fixed[key[0]])) if fixed else {}
+                        extra = (
+                            dict(zip(("ru_size", "ru_sx", "ru_y"), fixed[key[0]]))
+                            if fixed
+                            else {}
+                        )
                         if (key[0], it["en"]) in where:
                             extra["ink_left"] = where[(key[0], it["en"])]
-                        render_item(fonts, {**it, **extra, "start_scale": scale[key[0]], "start_sx": squeeze[key],
-                                            "start_tight": squeeze[key] < 1,
-                                            "force_shift": float(np.median(weight[it["box"][0]]))}, p[3], orig, p[4])
+                        render_item(
+                            fonts,
+                            {
+                                **it,
+                                **extra,
+                                "start_scale": scale[key[0]],
+                                "start_sx": squeeze[key],
+                                "start_tight": squeeze[key] < 1,
+                                "force_shift": float(np.median(weight[it["box"][0]])),
+                            },
+                            p[3],
+                            orig,
+                            p[4],
+                        )
             for p in pictures:
                 del p[5:]
         for name, merged, orig, out, report in pictures:
@@ -642,7 +780,9 @@ def main(argv=None):
             Image.fromarray(to_u8(out), "RGBA").save(dst)
             print(f"{name}: {len(report)} texts")
             if args.compare:
-                compare_sheet(report, os.path.join(args.compare, name.replace("/", "_") + ".png"))
+                compare_sheet(
+                    report, os.path.join(args.compare, name.replace("/", "_") + ".png")
+                )
     return 0
 
 

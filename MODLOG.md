@@ -111,7 +111,7 @@ Single-player VN, no anti-cheat.
 - In game: notice, Options (all pages), exit/back-to-title dialogs in Russian. Font has no `«»` -> `❝❞`. Small font (slider labels, version) has no Cyrillic -> 17 labels kept English. Shortened two strings. Final: 277 of 296 translated, 307 references.
 - Images: list of English interface pictures documented; replacement PNGs in `languages/<lang>/images/<archive>/<entry>.png`, written as CZ0 (`cztool.encode_cz0`, PNG reader, `cztool export`). First in-game test crashed on Options: `lucapak` dropped the `PARTS/\0` name prefix of `resident/PARTS.PAK`. Fixed (`name_prefix`); recoloured options tabs then shown in game.
 - Game folder during the tests: exe and PARTS.PAK swapped, user's config backed up to `backup/saves/GSE_4290390_2026-10-26_before_ui_test/`; afterwards original exe and PARTS.PAK back, save folder restored from that backup (test data in `..._after_ui_test/`). Originals also in `backup/orig/CARTAGRA.exe`, `backup/orig/image/resident/PARTS.PAK`.
-- Tests: 31 (incl. integration) pass. The exact `dist/ru` exe was not run in game; it differs from the tested one only by leaving `Game Ver. ` untranslated.
+- Tests: 31 (incl. integration) pass. The exact `dist/ru` exe was not run in game; it differs from the tested one only by leaving `Game Ver.` untranslated.
 
 ## 2026-10-26 session 9: originals split by source, picture export
 

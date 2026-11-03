@@ -34,8 +34,9 @@ SOURCE, TARGET = "FONT0", "FONT1"
 
 def input_files():
     """The font archives add_glyphs reads, relative to the input set's files/ folder."""
-    return [f"{FONT_DIR}/{g}__INFO.PAK" for g in (SOURCE, TARGET)] + \
-           [f"{FONT_DIR}/{g}_{face}.PAK" for g in (SOURCE, TARGET) for face in FACES]
+    return [f"{FONT_DIR}/{g}__INFO.PAK" for g in (SOURCE, TARGET)] + [
+        f"{FONT_DIR}/{g}_{face}.PAK" for g in (SOURCE, TARGET) for face in FACES
+    ]
 
 
 class FontInfo:
@@ -49,9 +50,12 @@ class FontInfo:
         self.width = list(struct.unpack_from("<65536H", data, p + 131072))
 
     def build(self):
-        return (struct.pack("<4H", self.size, self.line, self.per_row, len(self.cells))
-                + b"".join(bytes(c) for c in self.cells)
-                + struct.pack("<65536H", *self.glyph) + struct.pack("<65536H", *self.width))
+        return (
+            struct.pack("<4H", self.size, self.line, self.per_row, len(self.cells))
+            + b"".join(bytes(c) for c in self.cells)
+            + struct.pack("<65536H", *self.glyph)
+            + struct.pack("<65536H", *self.width)
+        )
 
 
 def _cubic(x):
@@ -87,11 +91,17 @@ def resample(pixels, n_in, n_out, scale):
     rows = []
     for y in range(n_in):
         line = pixels[y * n_in : (y + 1) * n_in]
-        rows.append([sum(line[j] * w for j, w in wt) for wt in wts] if any(line) else zero)
+        rows.append(
+            [sum(line[j] * w for j, w in wt) for wt in wts] if any(line) else zero
+        )
     out = []
     for wt in wts:
         used = [(rows[j], w) for j, w in wt if rows[j] is not zero]
-        out += [min(255.0, max(0.0, sum(r[x] * w for r, w in used))) for x in range(n_out)] if used else zero
+        out += (
+            [min(255.0, max(0.0, sum(r[x] * w for r, w in used))) for x in range(n_out)]
+            if used
+            else zero
+        )
     return out
 
 
@@ -105,7 +115,7 @@ def _sheets(pak):
     out = {}
     for e in pak.entries:
         prefix = e.name.rstrip("0123456789")
-        out[(prefix, int(e.name[len(prefix):]))] = e
+        out[(prefix, int(e.name[len(prefix) :]))] = e
     return out
 
 
@@ -120,8 +130,13 @@ def add_glyphs(files_dir, out_dir, chars, log=print):
     Copy `chars` from FONT0 into every FONT1 size and face (those FONT1 lacks), writing FONT1__INFO.PAK
     and FONT1_<face>.PAK to out_dir/font_win32_1920/. Returns the number of characters added.
     """
-    src_dir, dst_dir = os.path.join(files_dir, FONT_DIR), os.path.join(out_dir, FONT_DIR)
-    src_infos = {int(e.name[4:]): (e.name, FontInfo(e.data)) for e in LucaPak.read(os.path.join(src_dir, f"{SOURCE}__INFO.PAK")).entries}
+    src_dir, dst_dir = os.path.join(files_dir, FONT_DIR), os.path.join(
+        out_dir, FONT_DIR
+    )
+    src_infos = {
+        int(e.name[4:]): (e.name, FontInfo(e.data))
+        for e in LucaPak.read(os.path.join(src_dir, f"{SOURCE}__INFO.PAK")).entries
+    }
     src_size = max(src_infos)
     src = src_infos[src_size][1]
     missing = [c for c in chars if not src.glyph[ord(c)]]
@@ -129,7 +144,10 @@ def add_glyphs(files_dir, out_dir, chars, log=print):
         raise ValueError(f"{SOURCE} has no glyph for {''.join(missing)!r}")
     info_pak = LucaPak.read(os.path.join(src_dir, f"{TARGET}__INFO.PAK"))
     infos = {e: FontInfo(e.data) for e in info_pak.entries}
-    add = {e: [c for c in dict.fromkeys(chars) if not inf.glyph[ord(c)]] for e, inf in infos.items()}
+    add = {
+        e: [c for c in dict.fromkeys(chars) if not inf.glyph[ord(c)]]
+        for e, inf in infos.items()
+    }
     if not any(add.values()):
         return 0
     src_letter = src.cells[src.glyph[ord("A")]][2]
@@ -156,11 +174,21 @@ def add_glyphs(files_dir, out_dir, chars, log=print):
         path = os.path.join(src_dir, f"{TARGET}_{face}.PAK")
         pak = LucaPak.read(path)
         prefix = next(p for p, s in src_sheet if s == src_size)
-        _, palette, src_idx = cztool.decode_cz2(src_sheet[(prefix, src_size)].data, rows=rows_needed * src_cell)
+        _, palette, src_idx = cztool.decode_cz2(
+            src_sheet[(prefix, src_size)].data, rows=rows_needed * src_cell
+        )
         src_w = cztool.header(src_sheet[(prefix, src_size)].data)["width"]
         alpha = [palette[4 * i + 3] for i in range(256)]
-        to_index = [min(range(256), key=lambda i: (abs(alpha[i] - a), i)) for a in range(256)]
-        glyphs = {c: [float(alpha[i]) for i in _cell(src_idx, src_w, src_cell, src.glyph[ord(c)])] for c in chars}
+        to_index = [
+            min(range(256), key=lambda i: (abs(alpha[i] - a), i)) for a in range(256)
+        ]
+        glyphs = {
+            c: [
+                float(alpha[i])
+                for i in _cell(src_idx, src_w, src_cell, src.glyph[ord(c)])
+            ]
+            for c in chars
+        }
         for (pfx, size), entry in _sheets(pak).items():
             e, inf = sizes[size]
             if not add[e]:
@@ -175,12 +203,16 @@ def add_glyphs(files_dir, out_dir, chars, log=print):
                 i = first[e] + k
                 x0, y0 = (i % 100) * cell, (i // 100) * cell
                 for y in range(cell):
-                    out[(y0 + y) * w + x0 : (y0 + y) * w + x0 + cell] = bytes(to_index[round(v)] for v in px[y * cell : (y + 1) * cell])
+                    out[(y0 + y) * w + x0 : (y0 + y) * w + x0 + cell] = bytes(
+                        to_index[round(v)] for v in px[y * cell : (y + 1) * cell]
+                    )
             _set(entry, cztool.encode_cz2(entry.data, pal, w, h, bytes(out)))
         pak.write(os.path.join(dst_dir, f"{TARGET}_{face}.PAK"))
     added = max(len(a) for a in add.values())
-    log(f"  {FONT_DIR}/{TARGET}: {added} letters added to {len(infos)} sizes x {len(FACES)} faces "
-        f"(scaled from {SOURCE} size {src_size})")
+    log(
+        f"  {FONT_DIR}/{TARGET}: {added} letters added to {len(infos)} sizes x {len(FACES)} faces "
+        f"(scaled from {SOURCE} size {src_size})"
+    )
     return added
 
 
@@ -228,7 +260,9 @@ def redraw_numero(files_dir, out_dir, log=print):
     (compose_numero) in every size and face, writing FONT0__INFO.PAK and FONT0_<face>.PAK to
     out_dir/font_win32_1920/.
     """
-    src_dir, dst_dir = os.path.join(files_dir, FONT_DIR), os.path.join(out_dir, FONT_DIR)
+    src_dir, dst_dir = os.path.join(files_dir, FONT_DIR), os.path.join(
+        out_dir, FONT_DIR
+    )
     info_pak = LucaPak.read(os.path.join(src_dir, f"{SOURCE}__INFO.PAK"))
     infos = {e: FontInfo(e.data) for e in info_pak.entries}
     sizes = {inf.size: (e, inf) for e, inf in infos.items()}
@@ -244,20 +278,33 @@ def redraw_numero(files_dir, out_dir, log=print):
             hd, pal, idx = cztool.decode_cz2(entry.data)
             w, cell = hd["width"], size + 1
             alpha = [pal[4 * i + 3] for i in range(256)]
-            to_index = [min(range(256), key=lambda i: (abs(alpha[i] - a), i)) for a in range(256)]
-            glyph = lambda ch: [float(alpha[i]) for i in _cell(idx, w, cell, inf.glyph[ord(ch)])]
+            to_index = [
+                min(range(256), key=lambda i: (abs(alpha[i] - a), i))
+                for a in range(256)
+            ]
+            glyph = lambda ch: [
+                float(alpha[i]) for i in _cell(idx, w, cell, inf.glyph[ord(ch)])
+            ]
             px, adv = compose_numero(glyph("N"), glyph("o"), size)
             advance[e] = max(advance.get(e, 0), adv)
             out = bytearray(idx)
             i = inf.glyph[numero]
             x0, y0 = (i % 100) * cell, (i // 100) * cell
             for y in range(cell):
-                out[(y0 + y) * w + x0 : (y0 + y) * w + x0 + cell] = bytes(to_index[round(v)] for v in px[y * cell : (y + 1) * cell])
+                out[(y0 + y) * w + x0 : (y0 + y) * w + x0 + cell] = bytes(
+                    to_index[round(v)] for v in px[y * cell : (y + 1) * cell]
+                )
             _set(entry, cztool.encode_cz2(entry.data, pal, w, hd["height"], bytes(out)))
         pak.write(os.path.join(dst_dir, f"{SOURCE}_{face}.PAK"))
     for e, inf in infos.items():
-        inf.cells[inf.glyph[numero]] = (0, advance[e], inf.cells[inf.glyph[ord("N")]][2])
+        inf.cells[inf.glyph[numero]] = (
+            0,
+            advance[e],
+            inf.cells[inf.glyph[ord("N")]][2],
+        )
         inf.width[numero] = advance[e] << 8
         _set(e, inf.build())
     info_pak.write(os.path.join(dst_dir, f"{SOURCE}__INFO.PAK"))
-    log(f"  {FONT_DIR}/{SOURCE}: '№' redrawn in {len(infos)} sizes x {len(FACES)} faces")
+    log(
+        f"  {FONT_DIR}/{SOURCE}: '№' redrawn in {len(infos)} sizes x {len(FACES)} faces"
+    )

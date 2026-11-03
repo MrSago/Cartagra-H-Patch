@@ -43,7 +43,16 @@ def header(data):
     hl, w, h, bits = struct.unpack_from("<IHHH", data, 4)
     ox, oy = struct.unpack_from("<HH", data, 0x10)
     cw, ch = struct.unpack_from("<HH", data, 0x18)
-    return dict(magic=magic, header_length=hl, width=w, height=h, bits=bits, x=ox, y=oy, canvas=(cw, ch))
+    return dict(
+        magic=magic,
+        header_length=hl,
+        width=w,
+        height=h,
+        bits=bits,
+        x=ox,
+        y=oy,
+        canvas=(cw, ch),
+    )
 
 
 def _lzw_blocks(data, p):
@@ -189,8 +198,13 @@ def encode_cz2(original, palette, width, height, indices):
         pos = end
     head = bytearray(original[: struct.unpack_from("<I", original, 4)[0]])
     struct.pack_into("<HH", head, 8, width, height)
-    return (bytes(head) + palette + struct.pack("<I", len(blocks))
-            + b"".join(struct.pack("<II", len(c), n) for c, n in blocks) + b"".join(c for c, _ in blocks))
+    return (
+        bytes(head)
+        + palette
+        + struct.pack("<I", len(blocks))
+        + b"".join(struct.pack("<II", len(c), n) for c, n in blocks)
+        + b"".join(c for c, _ in blocks)
+    )
 
 
 def decode(data):
@@ -260,7 +274,9 @@ def _weights(src, dst):
     for i in range(dst):
         centre = (i + 0.5) * scale
         lo, hi = max(int(centre - support), 0), min(int(centre + support) + 1, src)
-        taps = [(j, max(0.0, 1 - abs(j + 0.5 - centre) / support)) for j in range(lo, hi)]
+        taps = [
+            (j, max(0.0, 1 - abs(j + 0.5 - centre) / support)) for j in range(lo, hi)
+        ]
         total = sum(w for _, w in taps)
         out.append([(j, w / total) for j, w in taps if w])
     return out
@@ -272,13 +288,20 @@ def resize(rgba, w, h, new_w, new_h):
     rows = []
     for y in range(h):
         row = rgba[4 * w * y : 4 * w * (y + 1)]
-        rows.append([[sum(row[4 * j + c] * k for j, k in taps) for c in range(4)] for taps in wx])
+        rows.append(
+            [
+                [sum(row[4 * j + c] * k for j, k in taps) for c in range(4)]
+                for taps in wx
+            ]
+        )
     out = bytearray(4 * new_w * new_h)
     for y, taps in enumerate(wy):
         for x in range(new_w):
             o = 4 * (y * new_w + x)
             for c in range(4):
-                out[o + c] = min(255, max(0, round(sum(rows[j][x][c] * k for j, k in taps))))
+                out[o + c] = min(
+                    255, max(0, round(sum(rows[j][x][c] * k for j, k in taps)))
+                )
     return bytes(out)
 
 
@@ -286,11 +309,20 @@ def write_png(path, rgba, w, h):
     raw = b"".join(b"\x00" + rgba[y * 4 * w : (y + 1) * 4 * w] for y in range(h))
 
     def chunk(t, d):
-        return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
+        return (
+            struct.pack(">I", len(d))
+            + t
+            + d
+            + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
+        )
 
     with open(path, "wb") as f:
-        f.write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
-                + chunk(b"IDAT", zlib.compress(raw, 6)) + chunk(b"IEND", b""))
+        f.write(
+            b"\x89PNG\r\n\x1a\n"
+            + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw, 6))
+            + chunk(b"IEND", b"")
+        )
 
 
 def read_png(path):
@@ -319,7 +351,9 @@ def read_png(path):
     w, h, depth, ctype, _, _, interlace = ihdr
     ch = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}.get(ctype)
     if depth != 8 or interlace or ch is None:
-        raise ValueError(f"{path}: only 8-bit, non-interlaced PNGs are supported (save it as 32-bit RGBA)")
+        raise ValueError(
+            f"{path}: only 8-bit, non-interlaced PNGs are supported (save it as 32-bit RGBA)"
+        )
     raw = zlib.decompress(bytes(idat))
     stride = w * ch
     rows, prev = bytearray(), bytearray(stride)
@@ -333,13 +367,17 @@ def read_png(path):
             line = bytearray((a + b) & 0xFF for a, b in zip(line, prev))
         elif ft == 3:
             for i in range(stride):
-                line[i] = (line[i] + ((line[i - ch] if i >= ch else 0) + prev[i]) // 2) & 0xFF
+                line[i] = (
+                    line[i] + ((line[i - ch] if i >= ch else 0) + prev[i]) // 2
+                ) & 0xFF
         elif ft == 4:
             for i in range(stride):
                 a = line[i - ch] if i >= ch else 0
                 b, c = prev[i], prev[i - ch] if i >= ch else 0
                 pa, pb, pc = abs(b - c), abs(a - c), abs(a + b - 2 * c)
-                line[i] = (line[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 0xFF
+                line[i] = (
+                    line[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)
+                ) & 0xFF
         elif ft:
             raise ValueError(f"{path}: bad PNG filter {ft}")
         rows += line
@@ -356,7 +394,10 @@ def read_png(path):
         out[3::4] = rows[1::2] if ctype == 4 else b"\xff" * (w * h)
     else:
         alpha = trns + b"\xff" * (256 - len(trns))
-        colors = [palette[3 * k : 3 * k + 3] + alpha[k : k + 1] for k in range(len(palette) // 3)]
+        colors = [
+            palette[3 * k : 3 * k + 3] + alpha[k : k + 1]
+            for k in range(len(palette) // 3)
+        ]
         out = bytearray(b"".join(colors[k] for k in rows))
     return w, h, bytes(out)
 
@@ -372,7 +413,9 @@ def export(pak, out_dir, names=None):
             hd, rgba = decode(e.data)
         except ValueError:
             continue
-        write_png(os.path.join(out_dir, e.name + ".png"), rgba, hd["width"], hd["height"])
+        write_png(
+            os.path.join(out_dir, e.name + ".png"), rgba, hd["width"], hd["height"]
+        )
         done.append((e.name, hd["width"], hd["height"]))
     return done
 
@@ -400,7 +443,9 @@ def main():
         rgba = composite(prgba, ph["width"], rgba, w, h, hd["x"], hd["y"])
         w, h = ph["width"], ph["height"]
     write_png(sys.argv[4], rgba, w, h)
-    print(f"{sys.argv[3]}: {hd['magic'][:3].decode()} {hd['width']}x{hd['height']} at ({hd['x']},{hd['y']}) -> {sys.argv[4]}")
+    print(
+        f"{sys.argv[3]}: {hd['magic'][:3].decode()} {hd['width']}x{hd['height']} at ({hd['x']},{hd['y']}) -> {sys.argv[4]}"
+    )
 
 
 if __name__ == "__main__":

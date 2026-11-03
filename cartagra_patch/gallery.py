@@ -70,7 +70,9 @@ class Gallery:
             if w > 0x8000:
                 k = 0x10000 - w
                 if not 1 <= k <= len(groups):
-                    raise ValueError(f"slot refers to group {k}, the table has {len(groups)}")
+                    raise ValueError(
+                        f"slot refers to group {k}, the table has {len(groups)}"
+                    )
                 slots.append(list(groups[k - 1]))
             else:
                 slots.append([w])
@@ -119,11 +121,15 @@ def image_map(jp_images, out_images, aliases=None):
     aliases: {(ARCHIVE, JP name): output name} for JP pictures stored under another name, whose output
     picture of the JP name (a substitute) then follows the JP picture.
     """
-    where = {(a, n): start + i for a, start, names in out_images for i, n in enumerate(names)}
+    where = {
+        (a, n): start + i for a, start, names in out_images for i, n in enumerate(names)
+    }
     out = {}
     for a, start, names in jp_images:
         for i, n in enumerate(names):
-            keys = ([(a, aliases[(a, n)])] if (a, n) in (aliases or {}) else []) + [(a, n)]
+            keys = ([(a, aliases[(a, n)])] if (a, n) in (aliases or {}) else []) + [
+                (a, n)
+            ]
             out[start + i] = [where[k] for k in keys if k in where]
     return out
 
@@ -158,7 +164,9 @@ def merge(target, jp, jp_to_out, archives):
         new = [i for i in ids if i not in home_of]
         if homes:
             home = homes[0]
-            anchor = index.get(id(home), anchor)  # a new slot keeps the anchor of the slot before it
+            anchor = index.get(
+                id(home), anchor
+            )  # a new slot keeps the anchor of the slot before it
             home += new
         elif new:
             home = new
@@ -215,10 +223,15 @@ def build_previews(target, jp, origins):
         else:
             jh, rgba = cztool.decode(jp.entries[k].data)
             jw, (jvw, jvh) = jh["width"], jh["canvas"]
-            visible = b"".join(rgba[4 * jw * y : 4 * (jw * y + jvw)] for y in range(jvh))
+            visible = b"".join(
+                rgba[4 * jw * y : 4 * (jw * y + jvw)] for y in range(jvh)
+            )
             small = cztool.resize(visible, jvw, jvh, vw, vh)
             margin = b"\0\0\0\xff"  # opaque black
-            pixels = b"".join(small[4 * vw * y : 4 * vw * (y + 1)] + margin * (w - vw) for y in range(vh))
+            pixels = b"".join(
+                small[4 * vw * y : 4 * vw * (y + 1)] + margin * (w - vw)
+                for y in range(vh)
+            )
             data = cztool.encode_cz0(model.data, pixels + margin * (w * (h - vh)))
             e = Entry(None, data, model.meta, dict(model.sections))
             e.sections[SEC_HASH] = xxh64(data)

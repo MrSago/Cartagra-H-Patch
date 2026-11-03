@@ -4,13 +4,13 @@ The 24 tables as first generated (commit `2265978`, 2026-10-26, folder `translat
 
 Each table lists every line of one restored scene with the Japanese original; nothing is translated yet:
 
-| Column | Meaning |
-| --- | --- |
-| `row` | Line number inside the scene |
-| `kind` | `msg` (dialogue) or `select` (choice; options separated by `$d`) |
-| `voice` | Voice ID in the Japanese release (0 = no voice) |
-| `jp` | Japanese original |
-| `translation` | Empty in every row |
+| Column        | Meaning                                                          |
+| ------------- | ---------------------------------------------------------------- |
+| `row`         | Line number inside the scene                                     |
+| `kind`        | `msg` (dialogue) or `select` (choice; options separated by `$d`) |
+| `voice`       | Voice ID in the Japanese release (0 = no voice)                  |
+| `jp`          | Japanese original                                                |
+| `translation` | Empty in every row                                               |
 
 The first tables also had `source` and `ru_existing` (the Russian release's line) columns, and called `translation` `ru`; they were dropped because the build does not use them.
 
@@ -23,4 +23,4 @@ To start a new language:
 
 Keep the engine markup: `@Name@` speaker prefix, `$d` choice separator, `$[base$/ruby$]` ruby, `\n` for a line break and `\t` for a tab.
 
-The Steam release's interface (table and pictures) is in [../_original_steam/](../_original_steam/README.md).
+The Steam release's interface (table and pictures) is in [../\_original_steam/](../_original_steam/README.md).

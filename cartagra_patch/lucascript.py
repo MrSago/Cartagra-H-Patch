@@ -34,7 +34,9 @@ class Instr:
         self.line = line  # debug line number (flags & 1), else None
         self.body = body
         self.offset = offset  # offset in the source script
-        self.targets = []  # source offsets this instruction jumps to (filled by jump_fields)
+        self.targets = (
+            []
+        )  # source offsets this instruction jumps to (filled by jump_fields)
 
     def encode(self):
         head = struct.pack("<H", self.line) if self.flags & 1 else b""
@@ -113,7 +115,9 @@ def assemble(instrs, valid_targets=None):
         for f in jump_fields(ins):
             src = struct.unpack_from("<I", body, f)[0]
             if src not in new_off:
-                raise ValueError(f"jump target 0x{src:X} (op {ins.op} at 0x{ins.offset or 0:X}) is not an instruction start")
+                raise ValueError(
+                    f"jump target 0x{src:X} (op {ins.op} at 0x{ins.offset or 0:X}) is not an instruction start"
+                )
             struct.pack_into("<I", body, f, new_off[src])
         ins.body = bytes(body)
         out += ins.encode()
@@ -133,7 +137,12 @@ def lzw_unpack(data):
         count, size = struct.unpack_from("<II", data, p)
         codes = struct.unpack_from(f"<{count}H", data, p + 8)
         p += 8 + 2 * count
-        table, chunk, prev, nxt = {i: bytes([i]) for i in range(256)}, bytearray(), None, 257
+        table, chunk, prev, nxt = (
+            {i: bytes([i]) for i in range(256)},
+            bytearray(),
+            None,
+            257,
+        )
         for c in codes:
             if c in table:
                 cur = table[c]
@@ -168,7 +177,11 @@ def lzw_pack(raw):
         codes.append(table[w])
     if nxt > 0x10000:
         raise ValueError("too much data for one LZW chunk")
-    return b"LZW\0" + struct.pack("<IIII", len(raw), 1, len(codes), len(raw)) + struct.pack(f"<{len(codes)}H", *codes)
+    return (
+        b"LZW\0"
+        + struct.pack("<IIII", len(raw), 1, len(codes), len(raw))
+        + struct.pack(f"<{len(codes)}H", *codes)
+    )
 
 
 def check(data):

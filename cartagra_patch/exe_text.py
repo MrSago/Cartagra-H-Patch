@@ -50,7 +50,9 @@ class Section:
     HEADER = struct.Struct("<8sIIIIIIHHI")
 
     def __init__(self, raw_header):
-        (self.name, self.vsize, self.va, self.rsize, self.raw, *_rest) = self.HEADER.unpack(raw_header)
+        self.name, self.vsize, self.va, self.rsize, self.raw, *_rest = (
+            self.HEADER.unpack(raw_header)
+        )
         self.name = self.name.rstrip(b"\0")
 
 
@@ -70,9 +72,13 @@ class PE:
         self.nsec = struct.unpack_from("<H", self.data, self.pe + 6)[0]
         self.sec_table = self.opt + struct.unpack_from("<H", self.data, self.pe + 20)[0]
         self.base = struct.unpack_from("<Q", self.data, self.opt + 24)[0]
-        self.sec_align, self.file_align = struct.unpack_from("<II", self.data, self.opt + 32)
-        self.sections = [Section(self.data[self.sec_table + 40 * k : self.sec_table + 40 * k + 40])
-                         for k in range(self.nsec)]
+        self.sec_align, self.file_align = struct.unpack_from(
+            "<II", self.data, self.opt + 32
+        )
+        self.sections = [
+            Section(self.data[self.sec_table + 40 * k : self.sec_table + 40 * k + 40])
+            for k in range(self.nsec)
+        ]
 
     def section(self, name):
         return next((s for s in self.sections if s.name == name), None)
@@ -105,7 +111,9 @@ class PE:
         text = self.section(b".text")
         for m in LEA_RIP.finditer(self.data, text.raw, text.raw + text.rsize):
             o = m.start()
-            target = self.off_to_rva(o) + 7 + struct.unpack_from("<i", self.data, o + 3)[0]
+            target = (
+                self.off_to_rva(o) + 7 + struct.unpack_from("<i", self.data, o + 3)[0]
+            )
             refs.setdefault(target, []).append(("lea", o + 3))
         rva, size = self.directory(5)  # base relocations
         p, end = self.rva_to_off(rva), self.rva_to_off(rva) + size
@@ -126,11 +134,15 @@ class PE:
     def add_section(self, name, payload):
         """Append a read-only data section; returns its RVA."""
         if self.section(name):
-            raise ValueError(f"the executable already has a {name.decode()} section (already patched?)")
+            raise ValueError(
+                f"the executable already has a {name.decode()} section (already patched?)"
+            )
         last = max(self.sections, key=lambda s: s.va)
         header_end = self.sec_table + 40 * (self.nsec + 1)
         first_raw = min(s.raw for s in self.sections if s.rsize)
-        if header_end > first_raw or any(self.data[self.sec_table + 40 * self.nsec : header_end]):
+        if header_end > first_raw or any(
+            self.data[self.sec_table + 40 * self.nsec : header_end]
+        ):
             raise ValueError("no room for another section header")
         cert_rva, cert_size = self.directory(4)
         if cert_size:
@@ -141,13 +153,38 @@ class PE:
         va = _align(last.va + last.vsize, self.sec_align)
         raw = _align(len(self.data), self.file_align)
         rsize = _align(len(payload), self.file_align)
-        self.data += b"\0" * (raw - len(self.data)) + payload + b"\0" * (rsize - len(payload))
-        struct.pack_into("<8sIIIIIIHHI", self.data, self.sec_table + 40 * self.nsec,
-                         name, len(payload), va, rsize, raw, 0, 0, 0, 0, SCN_INITIALIZED_DATA_READ)
+        self.data += (
+            b"\0" * (raw - len(self.data)) + payload + b"\0" * (rsize - len(payload))
+        )
+        struct.pack_into(
+            "<8sIIIIIIHHI",
+            self.data,
+            self.sec_table + 40 * self.nsec,
+            name,
+            len(payload),
+            va,
+            rsize,
+            raw,
+            0,
+            0,
+            0,
+            0,
+            SCN_INITIALIZED_DATA_READ,
+        )
         self.nsec += 1
         struct.pack_into("<H", self.data, self.pe + 6, self.nsec)
-        struct.pack_into("<I", self.data, self.opt + 56, _align(va + len(payload), self.sec_align))  # SizeOfImage
-        self.sections.append(Section(self.data[self.sec_table + 40 * (self.nsec - 1) : self.sec_table + 40 * self.nsec]))
+        struct.pack_into(
+            "<I", self.data, self.opt + 56, _align(va + len(payload), self.sec_align)
+        )  # SizeOfImage
+        self.sections.append(
+            Section(
+                self.data[
+                    self.sec_table
+                    + 40 * (self.nsec - 1) : self.sec_table
+                    + 40 * self.nsec
+                ]
+            )
+        )
         return va
 
     def update_checksum(self):
@@ -181,8 +218,14 @@ def load_table(path):
                 rva = int(cells[col["id"]], 16)
             except ValueError:
                 raise ValueError(f"{path}:{n}: bad id {cells[col['id']]!r}") from None
-            rows.append(dict(id=rva, original=tsv_unescape(cells[col["original"]]),
-                             translation=tsv_unescape(cells[col["translation"]]), line=n))
+            rows.append(
+                dict(
+                    id=rva,
+                    original=tsv_unescape(cells[col["original"]]),
+                    translation=tsv_unescape(cells[col["translation"]]),
+                    line=n,
+                )
+            )
     return rows
 
 
@@ -191,7 +234,16 @@ def write_table(path, rows):
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write("\t".join(TABLE_COLUMNS) + "\n")
         for r in rows:
-            f.write("\t".join((f"{r['id']:x}", tsv_escape(r["original"]), tsv_escape(r["translation"]))) + "\n")
+            f.write(
+                "\t".join(
+                    (
+                        f"{r['id']:x}",
+                        tsv_escape(r["original"]),
+                        tsv_escape(r["translation"]),
+                    )
+                )
+                + "\n"
+            )
 
 
 def check_table(pe, rows, refs=None):
@@ -213,14 +265,20 @@ def check_table(pe, rows, refs=None):
         except UnicodeDecodeError:
             text = None
         if text != r["original"]:
-            problems.append(f"{where}: the executable has {text!r} here, the table {r['original']!r} "
-                            f"(table made for another version of the game?)")
+            problems.append(
+                f"{where}: the executable has {text!r} here, the table {r['original']!r} "
+                f"(table made for another version of the game?)"
+            )
             continue
         if r["id"] not in refs:
             problems.append(f"{where}: nothing in the executable refers to this string")
-        if r["translation"] and PRINTF.findall(r["translation"]) != PRINTF.findall(r["original"]):
-            problems.append(f"{where}: placeholders {PRINTF.findall(r['translation'])} differ from the "
-                            f"original's {PRINTF.findall(r['original'])}")
+        if r["translation"] and PRINTF.findall(r["translation"]) != PRINTF.findall(
+            r["original"]
+        ):
+            problems.append(
+                f"{where}: placeholders {PRINTF.findall(r['translation'])} differ from the "
+                f"original's {PRINTF.findall(r['original'])}"
+            )
         if "\0" in r["translation"]:
             problems.append(f"{where}: NUL character in the translation")
     return problems
@@ -233,7 +291,9 @@ def translate(data, rows):
     """
     pe = PE(data)
     if pe.section(SECTION_NAME):
-        raise ValueError(f"the executable already has a {SECTION_NAME.decode()} section (already patched?)")
+        raise ValueError(
+            f"the executable already has a {SECTION_NAME.decode()} section (already patched?)"
+        )
     refs = pe.references()
     problems = check_table(pe, rows, refs)
     if problems:
@@ -272,9 +332,11 @@ def apply_fixes(data, fixes):
     for fix in fixes:
         old, new = bytes.fromhex(fix["old"]), bytes.fromhex(fix["new"])
         off = pe.rva_to_off(int(fix["rva"], 16))
-        if len(old) != len(new) or off is None or pe.data[off:off + len(old)] != old:
-            raise ValueError(f"executable fix {fix['name']!r}: expected {fix['old']} at RVA {fix['rva']}")
-        pe.data[off:off + len(new)] = new
+        if len(old) != len(new) or off is None or pe.data[off : off + len(old)] != old:
+            raise ValueError(
+                f"executable fix {fix['name']!r}: expected {fix['old']} at RVA {fix['rva']}"
+            )
+        pe.data[off : off + len(new)] = new
     if fixes:
         pe.update_checksum()
     return bytes(pe.data)
@@ -307,13 +369,15 @@ def restore_original_text(data, section, redirects):
     left = [t for t in pe.references() if inside(t)]
     if left:
         raise ValueError(f"{len(left)} references into {section} are not in the list")
-    del pe.data[sec.raw:]
+    del pe.data[sec.raw :]
     pe.data[pe.sec_table + 40 * (pe.nsec - 1) : pe.sec_table + 40 * pe.nsec] = bytes(40)
     pe.nsec -= 1
     pe.sections.pop()
     struct.pack_into("<H", pe.data, pe.pe + 6, pe.nsec)
     last = pe.sections[-1]
-    struct.pack_into("<I", pe.data, pe.opt + 56, _align(last.va + last.vsize, pe.sec_align))  # SizeOfImage
+    struct.pack_into(
+        "<I", pe.data, pe.opt + 56, _align(last.va + last.vsize, pe.sec_align)
+    )  # SizeOfImage
     pe.update_checksum()
     return bytes(pe.data), len(redirects)
 
@@ -335,7 +399,9 @@ def list_strings(data):
             continue
         if not all(c.isprintable() or c in "\n\t" for c in text):
             continue
-        out.append((rva, text, sum(k == "lea" for k, _ in rs), sum(k == "abs" for k, _ in rs)))
+        out.append(
+            (rva, text, sum(k == "lea" for k, _ in rs), sum(k == "abs" for k, _ in rs))
+        )
     return out
 
 
@@ -351,7 +417,9 @@ def main(argv=None):
         problems = check_table(PE(open(argv[1], "rb").read()), rows)
         for p in problems:
             print(p)
-        print(f"{len(rows)} rows, {sum(1 for r in rows if r['translation'])} translated, {len(problems)} problems")
+        print(
+            f"{len(rows)} rows, {sum(1 for r in rows if r['translation'])} translated, {len(problems)} problems"
+        )
         return 1 if problems else 0
     print(__doc__.split("Usage:")[1])
     return 2

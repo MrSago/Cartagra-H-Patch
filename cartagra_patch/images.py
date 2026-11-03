@@ -28,7 +28,9 @@ def load_list(path):
     with open(path, encoding="utf-8") as f:
         header = f.readline().rstrip("\n").split("\t")
         if [c for c in LIST_COLUMNS if c not in header]:
-            raise ValueError(f"{path}: the header must have the columns {', '.join(LIST_COLUMNS)}")
+            raise ValueError(
+                f"{path}: the header must have the columns {', '.join(LIST_COLUMNS)}"
+            )
         col = {name: i for i, name in enumerate(header)}
         for line in f:
             cells = line.rstrip("\n").split("\t")
@@ -50,7 +52,9 @@ def export(files_dir, rows, out_root, log=print):
     for archive, patterns in by_archive.items():
         path = archive_path(files_dir, archive)
         if not os.path.isfile(path):
-            raise ValueError(f"{path} not found: copy it into the input set to export its pictures")
+            raise ValueError(
+                f"{path} not found: copy it into the input set to export its pictures"
+            )
         pak = LucaPak.read(path)
         names = [e.name for e in pak.entries if e.data[:2] == b"CZ"]
         wanted = set()
@@ -85,7 +89,9 @@ def language_images(lang):
     out = {}
     root = lang["images_dir"]
     for dirpath, _, names in os.walk(root):
-        pngs = sorted(os.path.join(dirpath, n) for n in names if n.lower().endswith(".png"))
+        pngs = sorted(
+            os.path.join(dirpath, n) for n in names if n.lower().endswith(".png")
+        )
         if pngs:
             out[os.path.relpath(dirpath, root).replace(os.sep, "/")] = pngs
     return dict(sorted(out.items()))
@@ -95,7 +101,12 @@ def reference_png(lang, archive, png):
     """The exported original of a language's picture, or None (no interface_original or not exported)."""
     if not lang.get("interface_original_dir"):
         return None
-    ref = os.path.join(lang["interface_original_dir"], "images", *archive.split("/"), os.path.basename(png))
+    ref = os.path.join(
+        lang["interface_original_dir"],
+        "images",
+        *archive.split("/"),
+        os.path.basename(png),
+    )
     return ref if os.path.isfile(ref) else None
 
 
@@ -106,8 +117,14 @@ def changed_images(lang):
     """
     out = {}
     for archive, pngs in language_images(lang).items():
-        changed = [p for p in pngs if not (reference_png(lang, archive, p)
-                                           and filecmp.cmp(p, reference_png(lang, archive, p), shallow=False))]
+        changed = [
+            p
+            for p in pngs
+            if not (
+                reference_png(lang, archive, p)
+                and filecmp.cmp(p, reference_png(lang, archive, p), shallow=False)
+            )
+        ]
         if changed:
             out[archive] = changed
     return out

@@ -99,7 +99,9 @@ class Entry:
         self.data = data
         self.meta = meta  # per-entry metadata (flags & 1), raw bytes
         self.sections = sections or {}  # section type -> raw bytes
-        self.pad = pad  # original bytes after the data (not always zeros); None = zero fill
+        self.pad = (
+            pad  # original bytes after the data (not always zeros); None = zero fill
+        )
 
 
 class LucaPak:
@@ -118,7 +120,9 @@ class LucaPak:
         pak = cls()
         with open(path, "rb") as f:
             raw = f.read()
-        data_offset, count, pak.id_start, pak.block_size = struct.unpack_from("<IIII", raw, 0)
+        data_offset, count, pak.id_start, pak.block_size = struct.unpack_from(
+            "<IIII", raw, 0
+        )
         pak.reserved = raw[0x10:0x20]
         nsec, pak.flags = raw[0x20], raw[0x21]
         pos = 0x22
@@ -151,7 +155,13 @@ class LucaPak:
             for (stype, esize), soff in zip(pak.section_types, sec_offsets):
                 secs[stype] = raw[soff + esize * i : soff + esize * (i + 1)]
             pak.entries.append(
-                Entry(names[i], raw[off : off + size], raw[m0 : m0 + pak.meta_size], secs, raw[off + size : end])
+                Entry(
+                    names[i],
+                    raw[off : off + size],
+                    raw[m0 : m0 + pak.meta_size],
+                    secs,
+                    raw[off + size : end],
+                )
             )
         return pak
 
@@ -186,7 +196,9 @@ class LucaPak:
         head[0x10:0x20] = self.reserved
         head[0x20] = nsec
         head[0x21] = self.flags
-        for k, ((stype, esize), soff) in enumerate(zip(self.section_types, sec_offsets)):
+        for k, ((stype, esize), soff) in enumerate(
+            zip(self.section_types, sec_offsets)
+        ):
             struct.pack_into("<BBI", head, 0x22 + 6 * k, stype, esize, soff)
         struct.pack_into("<I", head, pos, names_offset)
         head[names_offset - len(self.name_prefix) : names_offset] = self.name_prefix
@@ -197,7 +209,11 @@ class LucaPak:
         for i, e in enumerate(self.entries):
             struct.pack_into("<II", head, index + 8 * i, blk, len(e.data))
             if self.meta_size:
-                head[meta_start + self.meta_size * i : meta_start + self.meta_size * (i + 1)] = e.meta.ljust(self.meta_size, b"\x00")
+                head[
+                    meta_start
+                    + self.meta_size * i : meta_start
+                    + self.meta_size * (i + 1)
+                ] = e.meta.ljust(self.meta_size, b"\x00")
             for (stype, esize), soff in zip(self.section_types, sec_offsets):
                 val = e.sections.get(stype, b"").ljust(esize, b"\x00")[:esize]
                 head[soff + esize * i : soff + esize * (i + 1)] = val
@@ -205,7 +221,9 @@ class LucaPak:
             pad = (-len(e.data)) % bs
             last = i == count - 1
             if e.pad is not None and (len(e.pad) == pad or (last and len(e.pad) < bs)):
-                body += e.pad  # keep the original filler (the last entry may be unpadded)
+                body += (
+                    e.pad
+                )  # keep the original filler (the last entry may be unpadded)
             else:
                 body += b"\x00" * pad
             blk += (len(e.data) + pad) // bs
@@ -256,8 +274,12 @@ def append_missing(base, donor, remap_parent=True):
             if old:
                 pname = donor.name_of(old)
                 if pname not in new_ids:
-                    raise ValueError(f"parent {pname} of {e.name} is not in the output archive")
-                e.sections[SEC_PARENT] = new_ids[pname].to_bytes(types[SEC_PARENT], "little")
+                    raise ValueError(
+                        f"parent {pname} of {e.name} is not in the output archive"
+                    )
+                e.sections[SEC_PARENT] = new_ids[pname].to_bytes(
+                    types[SEC_PARENT], "little"
+                )
         if SEC_HASH in types:
             e.sections[SEC_HASH] = xxh64(e.data)
     return added
@@ -274,7 +296,9 @@ def _donor_entry(base, donor, name):
     if SEC_PARENT in types:
         old = int.from_bytes(src.sections.get(SEC_PARENT, b""), "little")
         pname = donor.name_of(old) if old else None
-        secs[SEC_PARENT] = (base.id_of(pname) if pname else 0).to_bytes(types[SEC_PARENT], "little")
+        secs[SEC_PARENT] = (base.id_of(pname) if pname else 0).to_bytes(
+            types[SEC_PARENT], "little"
+        )
     if SEC_HASH in types:
         secs[SEC_HASH] = xxh64(src.data)
     return src, secs
@@ -292,7 +316,12 @@ def replace_from(base, donor, names):
         dst = by[name]
         if base.meta_size and len(src.meta) != base.meta_size:
             raise ValueError(f"{name}: metadata size differs")
-        dst.data, dst.meta, dst.sections, dst.pad = src.data, src.meta or dst.meta, secs, None
+        dst.data, dst.meta, dst.sections, dst.pad = (
+            src.data,
+            src.meta or dst.meta,
+            secs,
+            None,
+        )
     return list(names)
 
 
@@ -305,15 +334,19 @@ def append_copy(base, donor, name, new_name):
 
 def describe(path):
     pak = LucaPak.read(path)
-    print(f"{path}: {len(pak.entries)} entries, ids {pak.id_start}..{pak.id_start + len(pak.entries) - 1}, "
-          f"block {pak.block_size}, flags 0x{pak.flags:02X}, sections "
-          + ", ".join(f"0x{t:02X}x{s}" for t, s in pak.section_types)
-          + (f", meta {pak.meta_size} B/entry" if pak.meta_size else ""))
+    print(
+        f"{path}: {len(pak.entries)} entries, ids {pak.id_start}..{pak.id_start + len(pak.entries) - 1}, "
+        f"block {pak.block_size}, flags 0x{pak.flags:02X}, sections "
+        + ", ".join(f"0x{t:02X}x{s}" for t, s in pak.section_types)
+        + (f", meta {pak.meta_size} B/entry" if pak.meta_size else "")
+    )
     parents = {}
     for i, e in enumerate(pak.entries):
         par = int.from_bytes(e.sections.get(SEC_PARENT, b""), "little")
         parents[e.name] = pak.name_of(par) if par else ""
-        print(f"  {pak.id_start + i:6d}  {e.name:24s} {len(e.data):10d}  parent={parents[e.name]}")
+        print(
+            f"  {pak.id_start + i:6d}  {e.name:24s} {len(e.data):10d}  parent={parents[e.name]}"
+        )
 
 
 def unpack(path, out_dir):
@@ -338,8 +371,20 @@ def compare(path_a, path_b):
     changed = sorted(n for n in set(ia) & set(ib) if ia[n][1].data != ib[n][1].data)
     print(f"A: {path_a} ({len(a.entries)} entries, ids from {a.id_start})")
     print(f"B: {path_b} ({len(b.entries)} entries, ids from {b.id_start})")
-    for label, names in (("only in A", only_a), ("only in B", only_b), ("different resource ID", moved), ("different data", changed)):
-        print(f"  {label}: {len(names)}" + (f"  {', '.join(names[:20])}{' ...' if len(names) > 20 else ''}" if names else ""))
+    for label, names in (
+        ("only in A", only_a),
+        ("only in B", only_b),
+        ("different resource ID", moved),
+        ("different data", changed),
+    ):
+        print(
+            f"  {label}: {len(names)}"
+            + (
+                f"  {', '.join(names[:20])}{' ...' if len(names) > 20 else ''}"
+                if names
+                else ""
+            )
+        )
     return len(only_a) + len(only_b) + len(moved) + len(changed)
 
 
@@ -372,10 +417,23 @@ def main(argv=None):
             orig = f.read()
         rebuilt = LucaPak.read(args[0]).build()
         same = rebuilt == orig
-        print(f"{args[0]}: {'identical' if same else 'DIFFERENT'} ({len(orig):,} vs {len(rebuilt):,} bytes)")
+        print(
+            f"{args[0]}: {'identical' if same else 'DIFFERENT'} ({len(orig):,} vs {len(rebuilt):,} bytes)"
+        )
         if not same:
-            first = next((i for i in range(min(len(orig), len(rebuilt))) if orig[i] != rebuilt[i]), None)
-            print(f"  first difference at 0x{first:X}" if first is not None else "  differs in length only")
+            first = next(
+                (
+                    i
+                    for i in range(min(len(orig), len(rebuilt)))
+                    if orig[i] != rebuilt[i]
+                ),
+                None,
+            )
+            print(
+                f"  first difference at 0x{first:X}"
+                if first is not None
+                else "  differs in length only"
+            )
             return 2
     return 0
 
