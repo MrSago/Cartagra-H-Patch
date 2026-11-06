@@ -415,9 +415,7 @@ def run_build(opt, restoration, log=print):
 def _fix_gallery(merged, origins, fixes, out_images):
     """Apply restoration.json gallery_fixes by picture name (see gallery.retire and gallery.share_flag)."""
     ids = {
-        (a, n): start + i
-        for a, start, names in out_images
-        for i, n in enumerate(names)
+        (a, n): start + i for a, start, names in out_images for i, n in enumerate(names)
     }
 
     def image(archive, name):
@@ -433,9 +431,7 @@ def _fix_gallery(merged, origins, fixes, out_images):
     for a, n, other in shared:
         gallery.share_flag(merged, image(a, n), image(a, other))
     retired = [(a, n) for a, names in fixes["retired"].items() for n in names]
-    merged, origins = gallery.retire(
-        merged, origins, [image(a, n) for a, n in retired]
-    )
+    merged, origins = gallery.retire(merged, origins, [image(a, n) for a, n in retired])
     return merged, origins, retired, shared
 
 
