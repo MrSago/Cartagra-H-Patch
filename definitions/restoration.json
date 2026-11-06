@@ -116,6 +116,15 @@
       }
     ]
   },
+  "gallery_fixes": {
+    "_comment": "CG gallery pictures no script can show. retired: Steam's stand-ins for restored pictures, which only Steam's rewritten scenes showed and the JP gallery does not have. same_flag: a picture that gets the seen flag of another picture (picture: other), because Steam dropped the instruction that marked both at the same point. See TECHNICAL_NOTES.md (CG Gallery).",
+    "retired": {
+      "EVENTCG": ["e007k0", "eh001k0", "ne013"]
+    },
+    "same_flag": {
+      "EVENTCG": { "e064": "e076" }
+    }
+  },
   "start_sequence": {
     "_comment": "JP: New Game -> prologue (0000-op0_HD, ends with the opening movie) -> new_game_script; the Rengoku movie plays in 0308-02-00 before part 2. Steam moved the prologue to 0308-02-00 (which calls it) and the Rengoku movie to the end of 0209-08-00, and swapped the two movie files' names (Steam cartagra_movie_01 = JP cartagra_movie_02 and vice versa). The executable starts New Game at new_game_script, which now calls the prologue first.",
     "prologue": "0000-op0_HD",

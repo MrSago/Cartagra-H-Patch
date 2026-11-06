@@ -1305,6 +1305,31 @@ def gallery_table(slots, ranges):
 
 
 class GalleryTests(unittest.TestCase):
+    def test_retire_drops_pictures_and_empty_slots(self):
+        g = gallery.Gallery.parse(
+            gallery_table([[101], [102, 103], [104]], [[101, [0, 1, 2, 3]]])
+        )
+        origins = [("target", 0), ("jp", 5), ("target", 1)]
+        out, kept = gallery.retire(g, origins, [101, 103])
+        self.assertEqual(out.slots, [[102], [104]])
+        self.assertEqual(kept, [("jp", 5), ("target", 1)])
+        self.assertEqual(len(out.strings), 2)
+        # the flags of the other pictures do not move
+        self.assertEqual(out.seen_flag(104), 3)
+        self.assertEqual(gallery.Gallery.parse(out.build()).slots, out.slots)
+        with self.assertRaises(ValueError):
+            gallery.retire(g, origins, [999])
+
+    def test_share_flag(self):
+        g = gallery.Gallery.parse(gallery_table([[101], [102]], [[101, [7, 9]]]))
+        gallery.share_flag(g, 101, 102)
+        self.assertEqual((g.seen_flag(101), g.seen_flag(102)), (9, 9))
+        self.assertEqual(gallery.Gallery.parse(g.build()).seen_flag(101), 9)
+        with self.assertRaises(ValueError):
+            gallery.share_flag(g, 500, 102)
+        with self.assertRaises(ValueError):
+            gallery.share_flag(g, 101, 500)
+
     def test_round_trip(self):
         data = gallery_table(
             [[101], [102, 103], [104]], [[1, [7, 0xFFFF]], [101, [0, 1, 2, 3]]]

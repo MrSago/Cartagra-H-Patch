@@ -135,7 +135,7 @@ Single-player VN, no anti-cheat.
 - 22 pictures done: `title_menu1-3`, `title_extras`, `extra_title`, `extra_pt2`, `graphic_pt` (No. -> №), `title_logo01/02_en` and `title_bg02_en` (tagline «Недуг души, в котором любовь оборачивается одержимостью и безумием.»), `options_tab_en(_oc)`, `CONFIG_TAB1_en`, `system_menu_icon`, `legacy_pt_minimum`, `legacy_pt_full1`, `save/load_bg_text_1280/1920`, `INDICATOR_ICON_1280/1920_en`. Kept: `pc_button*` (Latin key labels), `extra_pt` (arrows only, no text despite images.tsv).
 - Pitfalls fixed on the way: letter look learned from the font's letters was blurred by 1 px misfit (now from the original letters); bins with 1-2 pixels decided the fill; over a black background the alpha was free and clipped the colour; inpainting next to transparency left a blue haze (alpha sharpened, effect limited to the erase radius); the grunge-textured hover state needed a texture fill.
 - Word choices for space: tabs Общие/Клавиши/Сенсор/Текст1; system menu Б.СОХР./Б.ЗАГР./В МЕНЮ; buttons ВОЗВРАТ/ПРОПУСК/НАЗАД/ВПЕРЁД/СОХР./ЗАГР./НАСТР./СКРЫТЬ/ЖУРНАЛ; Jump -> Переход (shrunk to the English width). The title menu words are wider than the English ones (up to ~345 of the 380-px cells).
-- Build: 22 pictures replaced, archives decode to exactly the PNGs; 33 tests pass with the integration test (it now expects the archives of changed pictures). Not seen in game yet.
+- Build: 22 pictures replaced, archives decode to exactly the PNGs; 33 tests pass with the integration test (it now expects the archives of changed pictures). User confirmed in game: everything works, including the automatic unlock of `pkg_sos` and `pkg_cs`.
 
 ## 2026-10-31 session 12: title menu words cut off in game
 
@@ -248,3 +248,12 @@ Single-player VN, no anti-cheat.
   3. Add the scenes to Extras > Endings: replay and return already work there, but the list is compiled C++ code and its screen may not hold 42 rows.
   4. A separate SCENE screen copied from the CG gallery (new Extras button, new task in machine code): the most work and risk.
   5. A proxy DLL (like the Chinese patch's `CHSpatch.dll`) drawing a new screen: flexible, but a new code base and toolchain.
+
+## 2026-11-07 session 23: CG gallery pictures that could not be unlocked
+
+- User finished the game; some gallery CGs stayed locked. Save `data000.dat`: 241 of 259 slots open, 18 locked, 6 slots missing variants. Save not changed (user's instruction).
+- Audit of all 484 gallery pictures against op 55 and op 120 in the patched scripts: 6 can never register: `e007k0`, `eh001k0`, `ne013`, `e064`, `pkg_sos`, `pkg_cs`.
+- JP comparison: `e007k0`, `eh001k0`, `ne013` are Steam stand-ins shown only by scenes the patch replaced; JP gallery has none. `e064`: JP `a2-7-1ED02` marks it with `e076`-`e079`; Steam dropped that mark (locked in unpatched Steam too).
+- Disassembly: `pkg_cs`/`pkg_sos` are marked by the executable when the gallery opens with exactly 2 locked pictures, so the unreachable pictures also blocked them. Image loads register in both load paths; `#30022` is a one-shot suppressor used by Steam; no bug there. `#6068` is only the snow effect.
+- Fix: `restoration.json` `gallery_fixes`, `gallery.retire`, `gallery.share_flag`: 3 stand-ins out (258 slots, 481 pictures, still 18 pages), `e064` shares the flag of `e076`. Flag numbers otherwise unchanged. Only `PARAM.PAK` and `SYSCG2.PAK` change; `ru` and `en` build; 54 tests pass (1 skipped). With the user's OK: both files copied into `Cartagra-2026-RU-Final/files/` (sha c19fd1c0..., d802a8a9...; previous files in `local/backup_before_gallery_fix_2026-11-07/`). Not seen in game yet.
+- The other locked CGs are in restored scenes and branches not played since the gallery update of 2026-11-03: they unlock by playing those branches.
