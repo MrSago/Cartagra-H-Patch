@@ -193,6 +193,7 @@ def run_build(opt, restoration, log=print):
             files_out,
             {"EVENTCG.PAK": eventcg_out, "OTHCG.PAK": othcg_out},
             split_images,
+            restoration["gallery_fixes"],
         )
 
     voice_index_path = os.path.join(tg, "voice", "VOICE.PAK")
@@ -411,7 +412,34 @@ def run_build(opt, restoration, log=print):
     return dist
 
 
-def _build_gallery(log, jp, tg, files_out, patched, aliases):
+def _fix_gallery(merged, origins, fixes, out_images):
+    """Apply restoration.json gallery_fixes by picture name (see gallery.retire and gallery.share_flag)."""
+    ids = {
+        (a, n): start + i
+        for a, start, names in out_images
+        for i, n in enumerate(names)
+    }
+
+    def image(archive, name):
+        if (archive, name) not in ids:
+            raise ValueError(f"no picture {archive}/{name}")
+        return ids[(archive, name)]
+
+    shared = [
+        (a, n, other)
+        for a, pairs in fixes["same_flag"].items()
+        for n, other in pairs.items()
+    ]
+    for a, n, other in shared:
+        gallery.share_flag(merged, image(a, n), image(a, other))
+    retired = [(a, n) for a, names in fixes["retired"].items() for n in names]
+    merged, origins = gallery.retire(
+        merged, origins, [image(a, n) for a, n in retired]
+    )
+    return merged, origins, retired, shared
+
+
+def _build_gallery(log, jp, tg, files_out, patched, aliases, fixes):
     """
     Add the JP release's gallery pictures to the target's CG gallery (PARAM.PAK) and put the previews
     (image/SYSCG2.PAK) in the new slot order (see gallery.py).
@@ -432,6 +460,9 @@ def _build_gallery(log, jp, tg, files_out, patched, aliases):
             gallery.Gallery.parse(jp_entry.data),
             gallery.image_map(archive_index(jp, "image"), out_images, aliases),
             [(start, len(names)) for _, start, names in out_images],
+        )
+        merged, origins, retired, shared = _fix_gallery(
+            merged, origins, fixes, out_images
         )
     except ValueError as e:
         raise BuildError(f"PARAM.PAK {gallery.ENTRY}: {e}") from None
@@ -457,6 +488,11 @@ def _build_gallery(log, jp, tg, files_out, patched, aliases):
             if left_out
             else ""
         )
+    )
+    log(
+        f"  PARAM.PAK: {len(retired)} Steam stand-in pictures taken out of the gallery "
+        f"({', '.join(n for _, n in retired)}); "
+        + ", ".join(f"{n} unlocks with {other}" for _, n, other in shared)
     )
     log(
         f"  SYSCG2.PAK: {len(origins)} gallery previews, {new_slots} of them from the JP release"

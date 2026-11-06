@@ -205,6 +205,45 @@ def merge(target, jp, jp_to_out, archives):
     return result, added, origins, left_out
 
 
+def retire(gallery, origins, pictures):
+    """
+    Take pictures out of the gallery (after merge, so that no seen-flag number moves). A slot left without
+    pictures goes too, with its string and its entry in origins. Their flags stay in the ranges, unused.
+    Returns (new Gallery, new origins).
+    """
+    gone = set(pictures)
+    missing = gone - set(gallery.pictures())
+    if missing:
+        raise ValueError(f"pictures {sorted(missing)} are not in the gallery")
+    kept = [
+        ([i for i in s if i not in gone], text, origin)
+        for s, text, origin in zip(gallery.slots, gallery.strings, origins)
+    ]
+    kept = [k for k in kept if k[0]]
+    return (
+        Gallery(
+            gallery.head,
+            gallery.unknown,
+            [s for s, _, _ in kept],
+            [text for _, text, _ in kept],
+            gallery.ranges,
+        ),
+        [origin for _, _, origin in kept],
+    )
+
+
+def share_flag(gallery, image, other):
+    """Give `image` the seen flag of `other`, so that it unlocks together with it. Changes `gallery`."""
+    flag = gallery.seen_flag(other)
+    if flag == NONE:
+        raise ValueError(f"image {other} has no seen flag")
+    for base, flags in gallery.ranges:
+        if base <= image < base + len(flags):
+            flags[image - base] = flag
+            return
+    raise ValueError(f"image {image} is in no range of the gallery table")
+
+
 def build_previews(target, jp, origins):
     """
     Put the previews (SYSCG2.PAK, LucaPak objects) in the merged slot order: the target's preview of a

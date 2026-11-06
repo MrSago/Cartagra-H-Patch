@@ -105,7 +105,7 @@ Moved here from README.md on 2026-11-03. The README keeps the build steps and th
 | Voices                | 1,901 voice clips of the restored scenes                                                                                                                                                                                      |
 | Game start            | New Game plays the prologue and the opening movie before the first scene, as in the Japanese release; the Rengoku movie goes back before part 2 ([Start Sequence](#start-sequence))                                           |
 | Crash fix             | One byte of `CARTAGRA.exe`: the sound code always uses the game's 48 kHz rate instead of a value that may already be freed ([Sound Crash](#sound-crash))                                                                      |
-| CG gallery            | Extras > CG gallery lists the restored CGs too: 259 slots on 18 pages instead of 185 on 13, in the release's order ([CG Gallery](#cg-gallery))                                                                                |
+| CG gallery            | Extras > CG gallery lists the restored CGs too: 258 slots on 18 pages instead of 185 on 13, in the release's order ([CG Gallery](#cg-gallery))                                                                                |
 | Ending replay         | `_scr_label` is written anew, so the endings in Extras > Endings start at their first instruction ([Label table](#label-table))                                                                                               |
 | Text                  | Restored lines use the language's tables, then an identical line of the release, otherwise the Japanese text                                                                                                                  |
 | Interface (`ru` only) | Interface strings of `CARTAGRA.exe` (296 of 297), 28 interface pictures, Cyrillic letters in FONT1, a Cyrillic `№` in FONT0, the scene headings of the save screens ([Interface Text and Images](#interface-text-and-images)) |
@@ -708,8 +708,8 @@ The gallery shows 15 slots per page (the exe divides the slot number by 15 and b
 
 |                   | JP                           | Steam (`ru-steam`)                   | Patched  |
 | ----------------- | ---------------------------- | ------------------------------------ | -------- |
-| Slots (pages)     | 254 (17)                     | 185 (13)                             | 259 (18) |
-| Pictures          | 473 (EVENTCG 344, OTHCG 129) | 301 (EVENTCG 187, OTHCG 113, BGCG 1) | 484      |
+| Slots (pages)     | 254 (17)                     | 185 (13)                             | 258 (18) |
+| Pictures          | 473 (EVENTCG 344, OTHCG 129) | 301 (EVENTCG 187, OTHCG 113, BGCG 1) | 481      |
 | Highest seen flag | 523                          | 380                                  | 532      |
 
 The JP release shows 18 pages in game (user's screenshot) for its 254 slots; why is not known (its executable is a different, 32-bit build). The Steam gallery is in story order (EVENTCG and OTHCG mixed), the JP one lists EVENTCG first. Seen-flag numbers differ between the releases, so the save's flags stay valid only with the target's numbers.
@@ -718,8 +718,24 @@ The JP release shows 18 pages in game (user's screenshot) for its 254 slots; why
 
 - a JP slot that shares a picture with a target slot adds its other pictures to that slot (for example `e001k3`, `eh001k1`–`k4`);
 - a JP slot with only new pictures becomes a new slot after the slot that holds the previous JP slot (74 new slots, mostly the H-scenes);
-- new gallery pictures get the free seen-flag numbers 381–532 in image ID order; the EVENTCG range grows to the 374 entries of the patched archive;
+- new gallery pictures get the free seen-flag numbers 381–532 in image ID order (the ranges keep these numbers: a save depends on them); the EVENTCG range grows to the 374 entries of the patched archive;
 - left out: `f022b`, `f022j` (JP OTHCG pictures the patch does not add; no restored scene shows them).
+
+After the merge, `restoration.json` `gallery_fixes` handles the pictures that no script shows (audit of all gallery pictures against op 55 and op 120 in the patched scripts, 2026-11-07):
+
+| Picture                      | Why nothing shows it                                                                                                                 | Fix                                                                                                                      |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `ne013`, `eh001k0`, `e007k0` | Steam-only stand-ins, shown only by Steam's `a1-2-3h`, `0220-02-06h` and `0208-15-00`; the JP scenes show `ne011a`/`ne012a`/`ne012b`, `eh001k1`–`k4` and the uncensored `e007`, `e007k1` | `gallery.retire`: taken out of the gallery (the JP gallery has none of them). `ne013` leaves a slot empty, so that slot and its preview go too |
+| `e064`                       | JP `a2-7-1ED02` marks `e064`, `e076`–`e079` together with op 118; Steam dropped the `e064` mark, so it cannot be unlocked in the unpatched Steam build either | `gallery.share_flag`: `e064` gets the flag of `e076` (137), so no script changes and a save with `e076` opens `e064` at once |
+| `pkg_sos`, `pkg_cs`          | Steam-only bonus pictures, marked by the executable, not by a script (see below)                                                     | none needed: they became reachable once the pictures above stopped counting as locked                                   |
+
+Retiring runs after the merge, so no flag number moves; the retired pictures keep their flags in the ranges, unused.
+
+**[V]** How pictures register (static analysis of the Steam executable, 2026-11-07). Both image-load paths (`0x254DD0` normally, the branch at `0x1F8569` in replay and fast modes) set the picture's flag, unless the script set `#30022` just before: that variable is a one-shot "do not register the next load", cleared by the load. Steam uses it five times (`0000-op1` twice, `0210-07-00`, `0210-13-00`, `0223-01-01`), each followed by op 120 for the same picture. A load on a negative layer never registers. **[H]** The second path is taken in replay and fast modes, so skipping should still register pictures; not tested in game.
+
+**[V]** The bonus pictures: when the gallery opens (`0xC2B43`) the game adds up the locked **pictures** (not slots; a picture without a flag counts as locked, `0x231A0`). If exactly 2 are locked it marks image IDs 1223 and 1222 (`pkg_cs`, `pkg_sos`) and counts again. So one unreachable picture anywhere blocks both. The marks reach the disk with the next save, like every other flag. Confirmed in game on 2026-11-07: the user unlocked both after opening the last two variants. The name list next to `pkg_sos` in the executable (`e005` ... `f037b`) is unrelated: it holds per-picture viewer settings.
+
+**[H]** Restored pictures in scenes read before 2026-11-03 stay locked until those branches are played again: the flags did not exist then, and the read-line bits in the save are the only trace. The game has no way to turn those bits into seen flags.
 
 **Previews.** `image/SYSCG2.PAK` holds one preview per slot (`CGGALLERY_CH01_001`...; JP `CGMODE_CH01_001`...), and the gallery takes the preview of slot k by image ID: `id_start` (63000) + k. The executable has no name for them. **[V]** In game (2026-11-03, user's screenshots), with only `PARAM.PAK` changed, slot 94 (page 7, slot 4) showed Steam's preview 94 but opened `eh029`, and almost every slot after the first new one was off the same way. `gallery.build_previews` therefore rewrites `SYSCG2.PAK` in the merged slot order: the target's preview of each target slot, the JP preview of each new slot. The two releases crop the previews the same way, but Steam's are 304x169 (visible 301x169, black margin) and JP's 320x170 (visible 306x170). The JP preview's visible part is scaled to 301x169 (`cztool.resize`, linear filter) and stored as CZ0 with a Steam header; the entries are renamed in order. The JP previews of H-scenes have white blobs over parts of the picture, as in the JP release.
 
@@ -897,7 +913,7 @@ The refactored build (2026-10-26) was not tested in game: its `ru` output is byt
 2. **[?]** Saves made inside the 24 changed scenes, the 4 retargeted predecessors or the 3 start-sequence scripts (`0000-op1`, `0209-08-00`, `0308-02-00`) may break after installing or removing the patch (they store positions in scripts whose layout changed). Not tested.
 3. **[H]** New select flag slots (197+) assume the engine's flag array is large enough. The JP build uses slots up to 229 (plus its options), and the in-game choice test worked.
 4. Save thumbnails for restored scenes are not set (JP op 130 dropped); `EVENTCG_SAVE.PAK` is unused.
-5. The Extras CG gallery lists the restored CGs since 2026-11-03 (18 pages seen in game; the rebuilt previews not yet). Their pictures unlock only when their scenes are played with the new gallery installed: playing them before did not set their seen flags. JP `f022b` and `f022j` are not in the gallery (the patch does not add them to `OTHCG.PAK`; no restored scene shows them). There is no scene replay: the Steam executable has no such screen ([Scene Replay](#scene-replay)).
+5. The Extras CG gallery lists the restored CGs since 2026-11-03 (18 pages seen in game; the previews and the 2026-11-07 gallery fixes were seen in game too). Their pictures unlock only when their scenes are played with the new gallery installed: playing them before did not set their seen flags. JP `f022b` and `f022j` are not in the gallery (the patch does not add them to `OTHCG.PAK`; no restored scene shows them). There is no scene replay: the Steam executable has no such screen ([Scene Replay](#scene-replay)).
 6. `0210-10-00` and `0215-03-00` show the Japanese date eyecatch instead of the English one the RUS build uses.
 7. Steam-only Russian lines inside censored scenes are dropped with the Steam rewrite.
 8. Restored pictures: the JP 4368×2457 pan image `e007k0` is not used (the RUS script shows the static uncensored `e007` instead), and Steam's own frame `e007k0` is no longer shown.
